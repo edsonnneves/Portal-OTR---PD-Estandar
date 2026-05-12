@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OTR · PD Estándar — Portal de Consultas</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+  :root{--yellow:#FFE600;--dark:#0D0D0D;--dark2:#1A1A1A;--dark3:#252525;--border:#2E2E2E;--text:#E8E8E0;--muted:#888880;--green:#00E5A0;--green-dim:#1a3d30;--blue:#3B82F6;--blue-dim:#1a2a4a;--amber:#F59E0B;--amber-dim:#3a2a10;--red:#EF4444;--red-dim:#3a1010;--purple:#A855F7;--purple-dim:#2a1a3a;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Inter',sans-serif;background:var(--dark);color:var(--text);min-height:100vh;overflow-x:hidden;}
+
+  /* SIDEBAR */
+  .sidebar{position:fixed;left:0;top:0;bottom:0;width:240px;background:var(--dark2);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:100;}
+  .sidebar-logo{padding:26px 22px 18px;border-bottom:1px solid var(--border);}
+  .logo-mark{display:flex;align-items:center;gap:10px;}
+  .logo-icon{width:36px;height:36px;background:var(--yellow);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Inter',sans-serif;font-weight:800;font-size:14px;color:var(--dark);flex-shrink:0;}
+  .logo-text{font-family:'Inter',sans-serif;font-size:13px;font-weight:700;color:var(--text);line-height:1.2;}
+  .logo-sub{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;}
+  .sb-section{padding:18px 14px 6px;}
+  .sb-label{font-size:9px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;padding:0 8px;margin-bottom:5px;}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;cursor:pointer;transition:all .15s;font-size:13px;color:var(--muted);border:1px solid transparent;margin-bottom:2px;}
+  .nav-item:hover{background:var(--dark3);color:var(--text);}
+  .nav-item.active{background:rgba(255,230,0,.08);border-color:rgba(255,230,0,.2);color:var(--yellow);font-weight:500;}
+  .nav-icon{font-size:15px;width:20px;text-align:center;flex-shrink:0;}
+  .nav-badge{margin-left:auto;background:var(--dark3);border:1px solid var(--border);border-radius:20px;font-size:10px;padding:1px 7px;color:var(--muted);font-family:'Inter',sans-serif;font-weight:600;}
+  .nav-item.active .nav-badge{background:rgba(255,230,0,.15);border-color:rgba(255,230,0,.3);color:var(--yellow);}
+  .sidebar-footer{margin-top:auto;padding:16px 20px;border-top:1px solid var(--border);}
+  .upload-btn{display:flex;align-items:center;gap:8px;width:100%;padding:10px 14px;background:rgba(255,230,0,.06);border:1px dashed rgba(255,230,0,.25);border-radius:8px;cursor:pointer;font-size:12px;color:var(--yellow);font-family:'Inter',sans-serif;transition:all .2s;}
+  .upload-btn:hover{background:rgba(255,230,0,.1);border-color:rgba(255,230,0,.4);}
+  .upload-btn input{display:none;}
+
+  /* MAIN */
+  .main{margin-left:240px;min-height:100vh;display:flex;flex-direction:column;}
+  .topbar{padding:18px 32px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--dark2);position:sticky;top:0;z-index:50;}
+  .topbar h2{font-family:'Inter',sans-serif;font-size:14px;font-weight:700;color:var(--text);}
+  .topbar p{font-size:11.5px;color:var(--muted);margin-top:2px;}
+  .search-wrap{display:flex;align-items:center;gap:8px;background:var(--dark3);border:1px solid var(--border);border-radius:8px;padding:8px 14px;width:220px;}
+  .search-wrap input{background:none;border:none;outline:none;font-size:13px;color:var(--text);font-family:'Inter',sans-serif;width:100%;}
+  .search-wrap input::placeholder{color:var(--muted);}
+  .content{padding:28px 32px;flex:1;}
+  .scene{display:none;}.scene.active{display:block;}
+
+  /* HOME */
+  .home-hero{margin-bottom:32px;}
+  .home-hero h1{font-family:'Inter',sans-serif;font-size:27px;font-weight:800;color:var(--text);line-height:1.2;margin-bottom:8px;}
+  .home-hero h1 em{color:var(--yellow);font-style:normal;}
+  .home-hero p{font-size:13.5px;color:var(--muted);max-width:480px;line-height:1.6;}
+  .home-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-bottom:32px;}
+  .hcard{background:var(--dark2);border:1px solid var(--border);border-radius:16px;padding:26px 24px;cursor:pointer;transition:all .22s;position:relative;overflow:hidden;}
+  .hcard::after{content:'';position:absolute;inset:0;opacity:0;transition:opacity .22s;}
+  .hcard:hover{transform:translateY(-3px);box-shadow:0 14px 36px rgba(0,0,0,.45);}
+  .hcard:hover::after{opacity:1;}
+  .hcard.h1{--ac:#FFE600;}.hcard.h1::after{background:radial-gradient(circle at 0 0,rgba(255,230,0,.06),transparent 65%);}
+  .hcard.h2{--ac:#00E5A0;}.hcard.h2::after{background:radial-gradient(circle at 0 0,rgba(0,229,160,.06),transparent 65%);}
+  .hcard.h3{--ac:#3B82F6;}.hcard.h3::after{background:radial-gradient(circle at 0 0,rgba(59,130,246,.06),transparent 65%);}
+  .hcard:hover{border-color:var(--ac);}
+  .hc-emoji{font-size:26px;margin-bottom:12px;}
+  .hc-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--ac);margin-bottom:7px;font-family:'Inter',sans-serif;}
+  .hc-title{font-family:'Inter',sans-serif;font-size:16px;font-weight:800;color:var(--text);margin-bottom:9px;}
+  .hc-desc{font-size:12.5px;color:var(--muted);line-height:1.55;margin-bottom:18px;}
+  .hc-stats{display:flex;gap:14px;padding-top:14px;border-top:1px solid var(--border);margin-bottom:16px;}
+  .hcs-val{font-family:'Inter',sans-serif;font-size:20px;font-weight:800;color:var(--ac);}
+  .hcs-lbl{font-size:10px;color:var(--muted);margin-top:2px;}
+  .hc-arrow{font-size:12px;font-weight:600;color:var(--ac);opacity:.7;transition:all .2s;}
+  .hcard:hover .hc-arrow{opacity:1;}
+
+  .home-strip{background:var(--dark2);border:1px solid var(--border);border-radius:12px;padding:20px 24px;}
+  .home-strip h3{font-family:'Inter',sans-serif;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px;}
+  .strip-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;}
+  .sg-val{font-family:'Inter',sans-serif;font-size:24px;font-weight:800;color:var(--text);}
+  .sg-lbl{font-size:11px;color:var(--muted);margin-top:3px;}
+
+  /* SCENE HEADER */
+  .scene-hd{margin-bottom:20px;}
+  .breadcrumb{font-size:11px;color:var(--muted);margin-bottom:5px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:color .15s;}
+  .breadcrumb:hover{color:var(--yellow);}
+  .scene-title{font-family:'Inter',sans-serif;font-size:19px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:9px;}
+  .sc-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+
+  /* MINI DASH */
+  .mdash{display:grid;gap:12px;margin-bottom:14px;}
+  .mdash.g4{grid-template-columns:repeat(4,1fr);}
+  .mdash.g3{grid-template-columns:repeat(3,1fr);}
+  .mdash.g2{grid-template-columns:repeat(2,1fr);}
+  .md{background:var(--dark2);border:1px solid var(--border);border-radius:11px;padding:16px 18px;position:relative;overflow:hidden;}
+  .md::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+  .md.y::before{background:var(--yellow);}.md.g::before{background:var(--green);}.md.b::before{background:var(--blue);}
+  .md.p::before{background:var(--purple);}.md.r::before{background:var(--red);}.md.a::before{background:var(--amber);}
+  .md-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:500;margin-bottom:7px;}
+  .md-val{font-family:'Inter',sans-serif;font-size:28px;font-weight:800;line-height:1;color:var(--text);}
+  .md-val.y{color:var(--yellow);}.md-val.g{color:var(--green);}.md-val.b{color:var(--blue);}
+  .md-val.p{color:var(--purple);}.md-val.r{color:var(--red);}.md-val.a{color:var(--amber);}
+  .md-sub{font-size:11px;color:var(--muted);margin-top:5px;}
+  .md-bar{height:3px;background:var(--dark3);border-radius:3px;overflow:hidden;margin-top:10px;}
+  .md-fill{height:100%;border-radius:3px;transition:width .7s ease;}
+
+  /* Q breakdown */
+  .qb{display:flex;flex-direction:column;gap:7px;}
+  .qb-row{display:grid;grid-template-columns:52px 1fr 26px;align-items:center;gap:7px;}
+  .qb-lbl{font-family:'Inter',sans-serif;font-size:11px;font-weight:700;color:var(--text);}
+  .qb-bg{height:3px;background:var(--dark3);border-radius:3px;overflow:hidden;}
+  .qb-fill{height:100%;border-radius:3px;background:var(--yellow);}
+  .qb-cnt{font-size:10.5px;color:var(--muted);text-align:right;font-family:'Inter',sans-serif;font-weight:600;}
+
+  /* Tribe mini cards */
+  .tribu-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+  .tcard{background:var(--dark2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;}
+  .tc-name{font-family:'Inter',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px;}
+  .tc-nums{display:flex;gap:14px;margin-bottom:8px;}
+  .tc-num-val{font-family:'Inter',sans-serif;font-size:17px;font-weight:800;}
+  .tc-num-lbl{font-size:10px;color:var(--muted);}
+  .tc-bar{height:3px;background:var(--dark3);border-radius:3px;overflow:hidden;}
+  .tc-fill{height:100%;border-radius:3px;}
+
+  /* Tag rows */
+  .tag-cloud{display:flex;flex-wrap:wrap;gap:7px;}
+  .tag{font-size:11.5px;padding:3px 10px;border-radius:20px;white-space:nowrap;}
+
+  /* Sparkline bars */
+  .sbar-list{display:flex;flex-direction:column;gap:6px;}
+  .sbar-row{display:flex;align-items:center;gap:8px;}
+  .sbar-lbl{font-size:11px;color:var(--text);min-width:80px;}
+  .sbar-bg{flex:1;height:3px;background:var(--dark3);border-radius:3px;overflow:hidden;}
+  .sbar-fill{height:100%;border-radius:3px;}
+  .sbar-cnt{font-size:10.5px;color:var(--muted);font-family:'Inter',sans-serif;font-weight:700;}
+
+  /* FILTERS */
+  .filter-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:16px;}
+  .fc{padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:var(--dark3);font-size:12px;color:var(--muted);cursor:pointer;transition:all .15s;white-space:nowrap;font-family:'Inter',sans-serif;}
+  .fc:hover{border-color:var(--yellow);color:var(--yellow);}
+  .fc.active{background:rgba(255,230,0,.1);border-color:var(--yellow);color:var(--yellow);font-weight:500;}
+  .fsel{padding:5px 26px 5px 10px;border-radius:7px;border:1px solid var(--border);background:var(--dark3);font-size:12px;color:var(--text);cursor:pointer;font-family:'Inter',sans-serif;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;outline:none;}
+  .f-count{font-size:11.5px;color:var(--muted);margin-left:auto;}
+
+  /* TABLE */
+  .twrap{background:var(--dark2);border:1px solid var(--border);border-radius:11px;overflow:hidden;}
+  .dtbl{width:100%;border-collapse:collapse;font-size:13px;}
+  .dtbl thead tr{background:var(--dark3);border-bottom:1px solid var(--border);}
+  .dtbl th{padding:10px 14px;text-align:left;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap;}
+  .dtbl td{padding:11px 14px;border-bottom:1px solid rgba(46,46,46,.55);color:var(--text);vertical-align:middle;line-height:1.4;}
+  .dtbl tbody tr:last-child td{border-bottom:none;}
+  .dtbl tbody tr:hover td{background:rgba(255,255,255,.015);}
+
+  /* BADGES */
+  .bge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500;white-space:nowrap;}
+  .bge::before{content:'';width:4px;height:4px;border-radius:50%;background:currentColor;}
+  .bge.finalizado{background:var(--green-dim);color:var(--green);border:1px solid rgba(0,229,160,.2);}
+  .bge.ongoing{background:var(--blue-dim);color:var(--blue);border:1px solid rgba(59,130,246,.2);}
+  .bge.cancelado{background:var(--red-dim);color:var(--red);border:1px solid rgba(239,68,68,.2);}
+  .bge.programado{background:#252525;color:var(--muted);border:1px solid var(--border);}
+  .bge.vigente{background:var(--green-dim);color:var(--green);border:1px solid rgba(0,229,160,.2);}
+  .bge.pendente{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(245,158,11,.2);}
+  .bge.comunicado{background:var(--green-dim);color:var(--green);border:1px solid rgba(0,229,160,.2);}
+  .bge.cambio{background:var(--purple-dim);color:var(--purple);border:1px solid rgba(168,85,247,.2);}
+  .bge.portfolio{background:var(--blue-dim);color:var(--blue);border:1px solid rgba(59,130,246,.2);}
+
+  /* PROGRESS */
+  .pgw{display:flex;align-items:center;gap:7px;}
+  .pgbar{flex:1;height:4px;background:var(--dark3);border-radius:4px;overflow:hidden;min-width:50px;}
+  .pgfill{height:100%;border-radius:4px;background:var(--green);}
+  .pgfill.a{background:var(--amber);}.pgfill.r{background:var(--red);}
+  .pgpct{font-size:11px;font-weight:700;font-family:'Inter',sans-serif;min-width:30px;text-align:right;}
+
+  /* PERIOD TAG */
+  .ptag{font-size:10px;font-weight:700;font-family:'Inter',sans-serif;padding:2px 7px;border-radius:4px;background:var(--dark3);border:1px solid var(--border);color:var(--muted);}
+
+  /* WI LINK */
+  .wil{display:inline-flex;align-items:center;gap:4px;color:var(--blue);font-size:11.5px;text-decoration:none;padding:3px 8px;border-radius:5px;border:1px solid rgba(59,130,246,.2);background:rgba(59,130,246,.06);transition:all .15s;white-space:nowrap;}
+  .wil:hover{background:rgba(59,130,246,.12);border-color:rgba(59,130,246,.4);}
+
+  /* COMMENT */
+  .cmt-unused{display:none;}
+
+  /* PAGINATION */
+  .pagination{display:flex;align-items:center;gap:5px;justify-content:center;padding:16px 0 2px;}
+  .pgbtn{width:30px;height:30px;border-radius:6px;border:1px solid var(--border);background:var(--dark3);color:var(--muted);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;transition:all .15s;font-family:'Inter',sans-serif;}
+  .pgbtn:hover{border-color:var(--yellow);color:var(--yellow);}
+  .pgbtn.on{background:var(--yellow);color:var(--dark);border-color:var(--yellow);font-weight:700;}
+  .pgbtn:disabled{opacity:.3;cursor:not-allowed;}
+
+  /* TOAST */
+  .toast{position:fixed;bottom:20px;right:20px;background:var(--dark2);border:1px solid var(--border);border-radius:10px;padding:12px 18px;font-size:13px;color:var(--text);z-index:999;display:flex;align-items:center;gap:8px;transform:translateY(80px);opacity:0;transition:all .3s;}
+  .toast.on{transform:translateY(0);opacity:1;}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-mark">
+      <div class="logo-icon">OTR</div>
+      <div><div class="logo-text">PD Estándar</div><div class="logo-sub">Portal de Consultas</div></div>
+    </div>
+  </div>
+
+  <div class="sb-section">
+    <div class="sb-label">Navegación</div>
+    <div class="nav-item active" onclick="go('home')" id="nav-home">
+      <span class="nav-icon">🏠</span><span>Menú Inicial</span>
+    </div>
+  </div>
+
+  <div class="sb-section">
+    <div class="sb-label">Escenarios</div>
+    <div class="nav-item" onclick="go('prio')" id="nav-prio">
+      <span class="nav-icon">🎯</span><span>Escenario 1 · Workshop</span>
+      <span class="nav-badge" id="bdg-prio">—</span>
+    </div>
+    <div class="nav-item" onclick="go('cambios')" id="nav-cambios">
+      <span class="nav-icon">🔄</span><span>Escenario 2 · Cambios</span>
+      <span class="nav-badge" id="bdg-cambios">—</span>
+    </div>
+    <div class="nav-item" onclick="go('proc')" id="nav-proc">
+      <span class="nav-icon">📋</span><span>Matriz de Procesos</span>
+      <span class="nav-badge" id="bdg-proc">—</span>
+    </div>
+  </div>
+
+  <div class="sidebar-footer">
+    <label class="upload-btn">⬆ Actualizar CSVs
+      <input type="file" multiple accept=".csv" onchange="uploadCSV(event)">
+    </label>
+  </div>
+</aside>
+
+<div class="main">
+  <header class="topbar">
+    <div><h2 id="tb-title">Menú Inicial</h2><p id="tb-meta">Cargando...</p></div>
+    <div class="search-wrap">
+      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" id="gSearch" placeholder="Buscar en cualquier escenario..." oninput="doSearch()">
+    </div>
+  </header>
+
+  <div class="content">
+
+    <!-- ══ HOME ══ -->
+    <div class="scene active" id="scene-home">
+      <div class="home-hero">
+        <h1>OTR · <em>PD Estándar</em></h1>
+        <p>Portal de consulta de los procesos operacionales. Selecciona un escenario para explorar los datos detallados.</p>
+      </div>
+
+      <div class="home-grid">
+        <div class="hcard h1" onclick="go('prio')">
+          <div class="hc-emoji">🎯</div>
+          <div class="hc-label">Escenario 1</div>
+          <div class="hc-title">Priorizacion Via Workshop</div>
+          <div class="hc-desc">Temas priorizados por quarter — progreso, estado y etapa actual de cada ítem.</div>
+          <div class="hc-stats">
+            <div><div class="hcs-val" id="hs1-tot">—</div><div class="hcs-lbl">Total temas</div></div>
+            <div><div class="hcs-val" id="hs1-fin">—</div><div class="hcs-lbl">Finalizados</div></div>
+            <div><div class="hcs-val" id="hs1-pct">—</div><div class="hcs-lbl">Conclusión</div></div>
+          </div>
+          <div class="hc-arrow">Acceder →</div>
+        </div>
+
+        <div class="hcard h2" onclick="go('cambios')">
+          <div class="hc-emoji">🔄</div>
+          <div class="hc-label">Escenario 2</div>
+          <div class="hc-title">Cambios & Portfolio</div>
+          <div class="hc-desc">Solicitudes vía flujo de cambios y portafolio con impacto en los procesos OTR.</div>
+          <div class="hc-stats">
+            <div><div class="hcs-val" id="hs2-tot">—</div><div class="hcs-lbl">Total registros</div></div>
+            <div><div class="hcs-val" id="hs2-camb">—</div><div class="hcs-lbl">Cambios</div></div>
+            <div><div class="hcs-val" id="hs2-port">—</div><div class="hcs-lbl">Portfolio</div></div>
+          </div>
+          <div class="hc-arrow">Acceder →</div>
+        </div>
+
+        <div class="hcard h3" onclick="go('proc')">
+          <div class="hc-emoji">📋</div>
+          <div class="hc-label">Diagnóstico</div>
+          <div class="hc-title">Matriz de Procesos OTR</div>
+          <div class="hc-desc">Todos los procesos OTR de la matriz de diagnóstico, con acceso directo a las WIs.</div>
+          <div class="hc-stats">
+            <div><div class="hcs-val" id="hs3-tot">—</div><div class="hcs-lbl">Total</div></div>
+            <div><div class="hcs-val" id="hs3-vig">—</div><div class="hcs-lbl">Vigentes</div></div>
+            <div><div class="hcs-val" id="hs3-pend">—</div><div class="hcs-lbl">Pendientes</div></div>
+          </div>
+          <div class="hc-arrow">Acceder →</div>
+        </div>
+      </div>
+
+      <div class="home-strip">
+        <h3>Visión Consolidada</h3>
+        <div class="strip-grid">
+          <div><div class="sg-val" id="sv-prio">—</div><div class="sg-lbl">Temas priorizados (todos los Q)</div></div>
+          <div><div class="sg-val" style="color:var(--green)" id="sv-fin">—</div><div class="sg-lbl">Priorizaciones finalizadas</div></div>
+          <div><div class="sg-val" style="color:var(--blue)" id="sv-camb">—</div><div class="sg-lbl">Cambios &amp; portfolio comunicados</div></div>
+          <div><div class="sg-val" style="color:var(--purple)" id="sv-wi">—</div><div class="sg-lbl">Procesos con WI vigente</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ PRIORIZAÇÕES ══ -->
+    <div class="scene" id="scene-prio">
+      <div class="scene-hd">
+        <div class="breadcrumb" onclick="go('home')">← Menú Inicial</div>
+        <div class="scene-title"><span class="sc-dot" style="background:var(--yellow)"></span>Escenario 1 · Priorizacion Via Workshop</div>
+      </div>
+
+      <!-- Mini Dash Row 1 -->
+      <div class="mdash g4">
+        <div class="md y"><div class="md-lbl">Total Temas</div><div class="md-val y" id="c1-tot">—</div><div class="md-sub">todos los quarters</div></div>
+        <div class="md g">
+          <div class="md-lbl">Finalizados</div><div class="md-val g" id="c1-fin">—</div>
+          <div class="md-sub" id="c1-fin-sub">—% completados</div>
+          <div class="md-bar"><div class="md-fill" id="c1-fin-bar" style="background:var(--green);width:0%"></div></div>
+        </div>
+        <div class="md b"><div class="md-lbl">On Going</div><div class="md-val b" id="c1-ong">—</div><div class="md-sub">en curso</div></div>
+        <div class="md">
+          <div class="md-lbl" style="margin-bottom:9px">Distribución por Quarter</div>
+          <div class="qb" id="c1-qb"></div>
+        </div>
+      </div>
+      <!-- Mini Dash Row 2 -->
+      <div class="mdash g4" style="margin-top:-4px">
+        <div class="md r"><div class="md-lbl">Cancelados</div><div class="md-val r" id="c1-can">—</div><div class="md-sub">removidos del scope</div></div>
+        <div class="md a"><div class="md-lbl">Programados</div><div class="md-val a" id="c1-prg">—</div><div class="md-sub">por iniciar</div></div>
+        <div class="md" style="grid-column:span 2">
+          <div class="md-lbl" style="margin-bottom:9px">Master Tribu</div>
+          <div class="tag-cloud" id="c1-tribu"></div>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="filter-row" style="margin-top:16px">
+        <span style="font-size:12px;color:var(--muted)">Filtrar:</span>
+        <select class="fsel" id="f-prio-q" onchange="renderPrio()"><option value="">Todos los quarters</option></select>
+        <select class="fsel" id="f-prio-tri" onchange="renderPrio()"><option value="">Todas las tribus</option></select>
+        <select class="fsel" id="f-prio-st" onchange="renderPrio()">
+          <option value="">Todos los status</option>
+          <option>Finalizado</option><option value="On going">On Going</option>
+          <option>Cancelado</option><option>Programado</option>
+        </select>
+        <span class="f-count" id="cnt-prio"></span>
+      </div>
+      <div class="twrap">
+        <table class="dtbl">
+          <thead><tr><th>Período</th><th>Tema</th><th>Sub Tribu / Master</th><th>Owner · Focal</th><th>Status</th><th>Progreso</th><th>Etapa Actual</th><th style="min-width:280px">Próximo Paso</th></tr></thead>
+          <tbody id="tb-prio"><tr><td colspan="8" style="text-align:center;padding:40px;color:var(--muted)">Cargando...</td></tr></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="pag-prio"></div>
+    </div>
+
+    <!-- ══ CAMBIOS ══ -->
+    <div class="scene" id="scene-cambios">
+      <div class="scene-hd">
+        <div class="breadcrumb" onclick="go('home')">← Menú Inicial</div>
+        <div class="scene-title"><span class="sc-dot" style="background:var(--green)"></span>Escenario 2 · Cambios & Portfolio</div>
+      </div>
+
+      <!-- Mini Dash -->
+      <div class="mdash g4">
+        <div class="md g"><div class="md-lbl">Total Registros</div><div class="md-val g" id="c2-tot">—</div><div class="md-sub">comunicados/publicados</div></div>
+        <div class="md p">
+          <div class="md-lbl">Cambios</div><div class="md-val p" id="c2-camb">—</div>
+          <div class="md-sub" id="c2-camb-sub">—% del total</div>
+          <div class="md-bar"><div class="md-fill" id="c2-camb-bar" style="background:var(--purple);width:0%"></div></div>
+        </div>
+        <div class="md b">
+          <div class="md-lbl">Portfolio</div><div class="md-val b" id="c2-port">—</div>
+          <div class="md-sub" id="c2-port-sub">—% del total</div>
+          <div class="md-bar"><div class="md-fill" id="c2-port-bar" style="background:var(--blue);width:0%"></div></div>
+        </div>
+        <div class="md">
+          <div class="md-lbl" style="margin-bottom:9px">Top Tribus</div>
+          <div class="sbar-list" id="c2-tribu-top"></div>
+        </div>
+      </div>
+      <div class="mdash g3" style="margin-top:-4px">
+        <div class="md"><div class="md-lbl" style="margin-bottom:9px">Alcance</div><div class="tag-cloud" id="c2-alc"></div></div>
+        <div class="md"><div class="md-lbl" style="margin-bottom:9px">Owners · Volumen atendido</div><div class="tag-cloud" id="c2-ow"></div></div>
+        <div class="md"><div class="md-lbl" style="margin-bottom:9px">Solicitantes · Top solicitantes</div><div class="tag-cloud" id="c2-sol"></div></div>
+      </div>
+
+      <!-- Filters -->
+      <div class="filter-row" style="margin-top:16px">
+        <span style="font-size:12px;color:var(--muted)">Origen:</span>
+        <div class="fc active" onclick="setCambFilter('',this)">Todos</div>
+        <div class="fc" onclick="setCambFilter('Cambio',this)">🔄 Cambio</div>
+        <div class="fc" onclick="setCambFilter('Portfolio de Proyectos',this)">📦 Portfolio</div>
+        <select class="fsel" id="f-camb-tri" onchange="renderCamb()"><option value="">Todas las tribus</option></select>
+        <select class="fsel" id="f-camb-alc" onchange="renderCamb()">
+          <option value="">Todos los alcances</option>
+          <option>Latam</option><option>MLB</option><option>MLM</option><option>MLC</option>
+        </select>
+        <span class="f-count" id="cnt-camb"></span>
+      </div>
+      <div class="twrap">
+        <table class="dtbl">
+          <thead><tr><th>Origen</th><th>Solicitud / Tema</th><th>Sub Tribu</th><th>Master Tribu</th><th>Alcance</th><th>Owner</th><th>Solicitante</th><th>Status</th></tr></thead>
+          <tbody id="tb-camb"><tr><td colspan="8" style="text-align:center;padding:40px;color:var(--muted)">Cargando...</td></tr></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="pag-camb"></div>
+    </div>
+
+    <!-- ══ PROCESOS ══ -->
+    <div class="scene" id="scene-proc">
+      <div class="scene-hd">
+        <div class="breadcrumb" onclick="go('home')">← Menú Inicial</div>
+        <div class="scene-title"><span class="sc-dot" style="background:var(--blue)"></span>Matriz de Procesos OTR · Mapeo de Temas PD Estándar</div>
+      </div>
+
+      <!-- Mini Dash -->
+      <div class="mdash g4">
+        <div class="md b"><div class="md-lbl">Total Procesos</div><div class="md-val b" id="c3-tot">—</div><div class="md-sub">mapeados</div></div>
+        <div class="md g">
+          <div class="md-lbl">WIs Vigentes</div><div class="md-val g" id="c3-vig">—</div>
+          <div class="md-sub" id="c3-vig-sub">—% documentados</div>
+          <div class="md-bar"><div class="md-fill" id="c3-vig-bar" style="background:var(--green);width:0%"></div></div>
+        </div>
+        <div class="md a"><div class="md-lbl">Pendientes</div><div class="md-val a" id="c3-pend">—</div><div class="md-sub">en espera de doc.</div></div>
+        <div class="md">
+          <div class="md-lbl" style="margin-bottom:9px">Por Milla</div>
+          <div class="sbar-list" id="c3-milla"></div>
+        </div>
+      </div>
+      <!-- Tribe cards -->
+      <div class="tribu-grid" id="c3-tribu-cards"></div>
+
+      <!-- Filters -->
+      <div class="filter-row">
+        <select class="fsel" id="f-proc-tri" onchange="renderProc()"><option value="">Todas las sub tribus</option></select>
+        <select class="fsel" id="f-proc-mas" onchange="renderProc()"><option value="">Todas las Tribus</option></select>
+        <select class="fsel" id="f-proc-st" onchange="renderProc()">
+          <option value="">Todos los status</option>
+          <option>Vigente</option><option>Pendente</option>
+        </select>
+        <span class="f-count" id="cnt-proc"></span>
+      </div>
+      <div class="twrap">
+        <table class="dtbl">
+          <thead><tr><th>Master</th><th>Milla</th><th>Sub Tribu</th><th>Tema / Proceso</th><th>Status WI</th><th>Alcance</th><th>Versión</th><th>Últ. Actualización</th><th>Links WI</th></tr></thead>
+          <tbody id="tb-proc"><tr><td colspan="9" style="text-align:center;padding:40px;color:var(--muted)">Cargando...</td></tr></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="pag-proc"></div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"><span>✅</span><span id="toast-msg"></span></div>
+
+<script>
+/* ════ DATA ════ */
+const DB={p:[],c:[],pr:[]};
+let cFilt='',pp=1,cp=1,prp=1;
+const PG=20;
+let srch='';
+
+const CSV_P=`Tipo,Owner,Focal Referente,Sub Tribu,Tema,Master Tribu,Status,Etapa Actual,Próximo Paso / Comentario,% Progreso,Périodo de Priorización
+Workshop,Alejandro Caliz,Nayra Pacheco,,Estandarización Planning FM,FM&LM,Finalizado,Comunicación y Publi de WI,WI 100% Actualizada y comunicada oficialmente,100%,Q3/25
+Workshop,Alejandro Caliz,Rebeca Cardenaz,Scheduling,Scheduling y Rostering FM,FM&LM,Finalizado,Comunicación y Publi de WI,WI 100% Actualizada y comunicada oficialmente,100%,Q3/25
+Workshop,Alejandro Caliz,Rebeca Cardenaz,Scheduling,Scheduling y Rostering LM,FM&LM,Finalizado,Comunicación y Publi de WI,WI 100% Actualizada y comunicada oficialmente,100%,Q3/25
+Workshop,Angelica Brentan,Thais Stilck,MLP XP,Bloqueo y Desbloqueo Drivers,Ecosystem,Finalizado,Comunicación y Publi de WI,WI 100% Actualizada y comunicada oficialmente,100%,Q3/25
+Workshop,Edson Neves,Natalia Lisboa,Fleet Mgmt,Fleet Mgmt - Planning y Execution,Ecosystem,Finalizado,Comunicación y Publi de WI,WI 100% Actualizada y comunicada oficialmente,100%,Q3/25
+Workshop,Edson Neves,David Ospina,LH Planning,Dedicated Fleet Planning LH,Linehaul,Finalizado,Comunicación y Publi de WI,WI 100% Actualizada y comunicada oficialmente,100%,Q3/25
+Workshop,Edson Neves,Diego Chiodi,LH Execution,Gobernanza y Reglas para edición de TT (OTA),Linehaul,Finalizado,Comunicación y Publi de WI,WI 100% Actualizada y comunicada oficialmente,100%,Q4/25
+Workshop,Victor salas,Diego Chiodi,LH Execution,NCC - Monitoring,Linehaul,Cancelado,Cancelado,Cancelado en Q4/25 — funcionalidad en versión inicial sin condiciones de avance. Retomada prevista y priorizada para Q3/26.,100%,Q4/25
+Workshop,Victor salas,Diego Chiodi,LH Execution,Drop & Hook,Linehaul,Finalizado,Comunicación y Publi de WI,WI 100% Actualizada y comunicada oficialmente,100%,Q4/25
+Workshop,Alejandro Caliz,Diego Chiodi,LH Transversal,GMV Gross Merchandise Value,Linehaul,Finalizado,Comunicación y Publi de WI,WI 100% Actualizada y comunicada oficialmente,100%,Q4/25
+Workshop,Edson Neves,Viviane Mansour,MLP XP,Gestión de Usuários Ext MLP,Ecosystem,Finalizado,Comunicación y Publi de WI,WI 100% Actualizada y comunicada oficialmente,100%,Q4/25
+Workshop,Edson Neves,Viviane Mansour,MLP XP,Discovery de accesos del usuários MLP,Ecosystem,Finalizado,Comunicación y Publi de WI,WI 100% Actualizada y comunicada oficialmente,100%,Q4/25
+Workshop,Edson Neves,Viviane Mansour,MLP XP,Validacion de KPIs Operativos,Ecosystem,Finalizado,Comunicación y Publi de WI,WI 100% Actualizada y comunicada oficialmente,100%,Q4/25
+Workshop,Edson Neves,David Ospina,LH Planning,Preparación Semanal Viajes LH,Linehaul,Finalizado,Comunicación y Publi de WI,WI 100% Actualizada y comunicada oficialmente,100%,Q1/26
+Workshop,Edson Neves,David Ospina,LH Planning,Vehicle Planning,Linehaul,Cancelado,Cancelado,Cancelado tras un reanálisis del escenario. Proceso actual considerado maduro — las próximas ganancias dependen de mejoras sistémicas futuras. Sin fecha definida de reanudación.,100%,Q1/26
+Workshop,Edson Neves,Thais Stilck,DX,Helpers,Ecosystem,On going,Validación de WI,WI validada. Publicación oficial programada para el 26/05.,83%,Q1/26
+Workshop,Sara Guzmán,Viviane Mansour,MLP Exp,Playbook Interno: Canal de Ayuda a los MLPs,Ecosystem,Cancelado,Cancelado,Cancelado temporalmente por recomendación del equipo de SRM — actualizaciones sistémicas de Producto previstas para Q2 impactan el alcance. Retomada planificada para Q3/26 con alineación a las nuevas herramientas.,100%,Q1/26
+Workshop,Alejandro Caliz,Kamila Sayuri,FM + LM,PUP D-1/D-7,FM&LM,On going,Validación de WI,WI en proceso final de validación. Fecha prevista de comunicación y publicación: 26/05.,83%,Q1/26
+Workshop,Angelica Brentan,Natalia Ferraz,Seller Ops,Gestion de Sellers Ofensores,Ecosystem,Finalizado,Comunicación y Publi de WI,WI validada y comunicada oficialmente a LATAM y ya publicada en el portal WOW.,100%,Q1/26
+Workshop,Carlos Quintas,Natalia Ferraz,Seller Ops,Flujo WDM de Sellers,Ecosystem,On going,Validación de WI,El draft de la WI será enviado a más tardar en el 13/05 para validación y aprobación de los focales expertos.,83%,Q1/26
+Workshop,Mariana Damaceno,Leonardo Avelino,LH Planning,Gestion de Circuitos,Linehaul,On going,Prework,Alineación con owners realizada. Sesión de pre-work agendada para el 21/05.,17%,Q2/26
+Workshop,Carlos Quintas/Edson Neves,Cristina Ramirez/Viviane Mansour,FM + LM,Review Procesos Dispatcher (OTR),FM&LM,On going,Prework,Pre-work en curso (11–18/05). Consolidación del diagnóstico y propuesta V0 de la WI previstas para el 22/05 con sesiones de WS a partir del 25/05.,17%,Q2/26
+Workshop,Alejandro Caliz,Kamila Sayuri,FM + LM,Interacción Sellers x Places,FM&LM,On going,Prework,Alineación con owners realizada. Sesión de pre-work agendada para el 11/05.,17%,Q2/26
+Workshop,Edson Neves,Leonardo Brambilla,Fleet Mgmt,Safety & Branding - Fleet Mgmt,Ecosystem,Programado,To Start,Tema aún no iniciado. Inicio previsto para Q2/26.,0%,Q2/26
+Workshop,Edson Neves,Pedro Alcantara,LH Execution,Panel de Alertas,Linehaul,On going,Prework,Alineación con owner realizada. Sesiones de pre-work agendadas para el 20/05.,17%,Q2/26
+Workshop,Edson Neves,Pedro Alcantara,LH Execution,Load Factor,Linehaul,Programado,To Start,Tema aún no iniciado. Inicio previsto para Q2/26.,0%,Q2/26`;
+
+const CSV_C=`Origen,Owner,Solicitante,Solicitud,Sub Tribu,Master Tribu,Alcance,Status
+Cambio,Edson Neves,Jose Roberto,Alteração de saca Standard,FM + LM,FM&LM,Latam,Comunicado/Publicado
+Cambio,Edson Neves,Jose Angel,Unificación de Gates,Transv.,ALL,Latam,Comunicado/Publicado
+Cambio,Edson Neves,João Costa,Atualização WI de Reversas de Insumos,Linehaul,Linehaul,MLB,Comunicado/Publicado
+Cambio,Edson Neves,Jesus Eduardo,Cambio en redacción para WI_Monitoreo de ruta LM OTR_ES,FM + LM,FM&LM,MLM,Comunicado/Publicado
+Cambio,Edson Neves,João Costa,WI Line Haul NCC: Key Account,Linehaul,Linehaul,MLB,Comunicado/Publicado
+Cambio,Edson Neves,João Costa,WI Line Haul NCC: Regionais,Linehaul,Linehaul,MLB,Comunicado/Publicado
+Cambio,Alexandre Karabolad,Alexandre Karabolad,AppSheet para Auditoria de Lacres no XPT,Linehaul,Linehaul,Latam,Comunicado/Publicado
+Cambio,Edson Neves,Jose Angel,Precintos como proceso,Linehaul,Linehaul,Latam,Comunicado/Publicado
+Cambio,Edson Neves,João Costa,WI de NCC: Regionais Qualidade e Transit Time,Linehaul,Linehaul,MLB,Comunicado/Publicado
+Cambio,Edson Neves,Kristina Sarquiz,Scheduling 2.0 - Rechazo tras la aceptación del viaje,FM + LM,FM&LM,Latam,Comunicado/Publicado
+Cambio,Edson Neves,Kristina Sarquiz,Scheduling 2.0 - Ciclos en pedido de servicios obligatorio,FM + LM,FM&LM,Latam,Comunicado/Publicado
+Cambio,Edson Neves,Kristina Sarquiz,Scheduling 2.0 - Asignación 2do Driver en Rostering,FM + LM,FM&LM,Latam,Comunicado/Publicado
+Cambio,Edson Neves,Kristina Sarquiz,Scheduling 2.0 - Candado tarifa LM,FM + LM,FM&LM,Latam,Comunicado/Publicado
+Cambio,Edson Neves,Kristina Sarquiz,Scheduling 2.0 - Rostering Obligatorio,FM + LM,FM&LM,Latam,Comunicado/Publicado
+Cambio,Sara Hernandez,Samuel Silva,Inclusión de Amarração de cargas Line Haul Meli Air,Linehaul,Linehaul,Latam,Comunicado/Publicado
+Cambio,Edson Neves,Jose Angel,YMS - Nuevo Gate - SVC Dedicados,FM + LM,FM&LM,Latam,Comunicado/Publicado
+Cambio,Edson Neves,Amaia Galan,FM & LM - Alertas monitoreo,FM + LM,FM&LM,Latam,Comunicado/Publicado
+Cambio,Edson Neves,Abisai Hernandez,LABELESS RTS,FM + LM,FM&LM,Latam,Comunicado/Publicado
+Cambio,Edson Neves,Jose Angel,Encendidos por default de YMS,FM + LM,FM&LM,Latam,Comunicado/Publicado
+Cambio,Edson Neves,João Costa,WI Reversa de insumo - Atualização de KPIs e responsáveis,Linehaul,Linehaul,MLB,Comunicado/Publicado
+Cambio,Edson Neves,Martin Winkler,Modificaciones en la WI de Granel,FM + LM,FM&LM,MLM,Comunicado/Publicado
+Cambio,Edson Neves,Jose Angel,Redefinición de Propósito en Monitor de Patio LH,Linehaul,Linehaul,Latam,Comunicado/Publicado
+Cambio,Edson Neves,Jose Angel,Registro de Precintos,FM + LM,FM&LM,Latam,Comunicado/Publicado
+Cambio,Edson Neves,Jose Angel,Encendidos por default de Monitor de Patio de LH,TODOS,TODOS,Latam,Comunicado/Publicado
+Cambio,Edson Neves,João Costa,Ajustes WIs de Field Planning LH MLB,Linehaul,Linehaul,MLB,Comunicado/Publicado
+Cambio,Edson Neves,Jose Angel,Processo Dock Out Automático - Monitor de Patio,Linehaul,Linehaul,Latam,Comunicado/Publicado
+Cambio,Edson Neves,Simone Cavalcante,WI Flujo de Paquetes de Fraudes,SVC,FM&LM,Latam,Comunicado/Publicado
+Cambio,Alejandro Caliz,Kristina Sarquiz,Deprecado Scheduling 1.0,Last Mile,FM&LM,Latam,Comunicado/Publicado
+Cambio,Edson Neves,Martin Winkler,Modificaciones en la WI de Carga a Granel,Line Haul,Linehaul,MLM,Comunicado/Publicado
+Cambio,Edson Neves,Alexandre Karabolad,Atualziação WI de Cheapest SVP CC,SVC,FM&LM,MLB,Comunicado/Publicado
+Cambio,Edson Neves,Jose Angel,Monitor de patio para despachos LH en SVC,Middle Mile,FM&LM,Latam,Comunicado/Publicado
+Cambio,Edson Neves,Jose Angel,Nuevo Gate - SVC Dedicados,SVC Last Mile,FM&LM,Latam,Comunicado/Publicado
+Cambio,Edson Neves,Marcela Almeida,FOS Expedition - Eliminación del ingreso manual de Doca en SVC,SVC,FM&LM,Latam,Comunicado/Publicado
+Cambio,Edson Neves,Alexandre Karabolad,Inclusao de Colagem de Declaracao de Conteudo MLB,XD Places,FM&LM,MLB,Comunicado/Publicado
+Cambio,Edson Neves,Marcos Marisca,layout final da esteira,SVC,FM&LM,MLB,Comunicado/Publicado
+Cambio,Alexandre Karabolad,Alexandre Karabolad,Exclusao da possibilidade de SVC encerrar rotas manualmente,Last Mile,FM&LM,Latam,Comunicado/Publicado
+Cambio,Edson Neves,Lucas Boeing,Alteração na WI de Scheduling 2.0 MELI,Last Mile Line Haul,FM&LM,Latam,Comunicado/Publicado
+Cambio,Edson Neves,Mat Estevão,Cambio de pesos y medidas,XD,FM&LM,MLB MLM MLA,Comunicado/Publicado
+Cambio,Edson Neves,Jhenifer Chiarella,Ajuste de processo de aprovação de avulsas FM,First Mile,FM&LM,MLB,Comunicado/Publicado
+Cambio,Edson Neves,Marcos Marisca,Redução de Entregas falsas,SVC,FM&LM,MLB,Comunicado/Publicado
+Cambio,Alejandro Caliz,Lucas Boeing,Comunicado Desactivación Herramientas Scheduling 1.0,First Mile Last Mile,FM&LM,Latam,Comunicado/Publicado
+Cambio,Edson Neves,Jose Angel,Auditorias de Vehiculos Cheios,First Mile,FM&LM,Latam,Comunicado/Publicado
+Cambio,Edson Neves,Roberto Lira,Alteração de WI_Scheduling 2.0 MELI Texto explicativo,Last Mile,FM&LM,Latam,Comunicado/Publicado
+Cambio,Edson Neves,Kristina Sarquiz,Rechazo tras la aceptación del viaje v2,Last Mile,FM&LM,Latam,Comunicado/Publicado
+Cambio,Edson Neves,Kristina Sarquiz,Ciclos en pedido de servicios obligatorio v2,Last Mile,FM&LM,Latam,Comunicado/Publicado
+Cambio,Edson Neves,Abisai Hernandez,Boxi en Sorting,SVC,FM&LM,Latam,Comunicado/Publicado
+Cambio,Edson Neves,Amaia Galan,Alertas monitoreo v2,Last Mile,FM&LM,Latam,Comunicado/Publicado
+Cambio,Edson Neves,Jose Angel,Dock out automatico,Line Haul,Linehaul,Latam,Comunicado/Publicado
+Cambio,Edson Neves,João Costa,Atualização WI Field e Planning Line Haul,Line Haul,Linehaul,MLB,Comunicado/Publicado
+Cambio,Edson Neves,Thiago Niederauer,Melhoria no texto na Wi de RTS em XPT,Last Mile,FM&LM,MLB,Comunicado/Publicado
+Cambio,Edson Neves,João Costa,WI - Reversa de insumos: mudança na nomenclatura,Line Haul,Linehaul,MLB,Comunicado/Publicado
+Cambio,Edson Neves,João Costa,SVC Consolidador,SVC Line Haul,FM&LM,Latam,Comunicado/Publicado
+Cambio,Edson Neves,Roberto Lira,Inclusão de texto mandatório WI Sorting e Dispatch SVC,Middle Mile,Linehaul,MLB,Comunicado/Publicado
+Cambio,Edson Neves,Marcos Marisca,gaylord ou backer cart no final da esteira,SVC,FM&LM,MLB,Comunicado/Publicado
+Cambio,Edson Neves,João Costa,WI Line Haul NCC: Key Account v2,Line Haul,Linehaul,MLB,Comunicado/Publicado
+Cambio,Edson Neves,João Costa,WI Line Haul NCC: Regionais v2,Line Haul,Linehaul,MLB,Comunicado/Publicado
+Portfolio de Proyectos,Edson Neves,Viviane Mansour,Adecuación de Roles y Permisos de MLP,Fleet & DX,Ecosystem,Latam,Comunicado/Publicado
+Portfolio de Proyectos,Edson Neves,Franco Marmili,Mejorar el uso de templates en procesos masivos,Fleet & DX,Ecosystem,Latam,Comunicado/Publicado
+Portfolio de Proyectos,Edson Neves,Franco Marmili,Mejoras en proceso de solicitud de permisos a Roles,Fleet & DX,Ecosystem,Latam,Comunicado/Publicado
+Portfolio de Proyectos,Edson Neves,Virginia Rocco,Candado Tarifas LH,Linehaul,Linehaul,Latam,Comunicado/Publicado
+Portfolio de Proyectos,Edson Neves,Jose Angel,Nueva WI - Falicity Resources,FM + LM,FM&LM,Latam,Comunicado/Publicado
+Portfolio de Proyectos,Edson Neves,Franco Marmili,Actualización de Role Owners,FLeet & DX,MLP XP,Latam,Comunicado/Publicado
+Portfolio de Proyectos,Edson Neves,Leandro Ezequiel,Routing by Meli FM,Routing,FM&LM,Latam,Comunicado/Publicado
+Portfolio de Proyectos,Edson Neves,Lucas Boeing,Edición de Viaje,Scheduling,FM&LM,Latam,Comunicado/Publicado
+Portfolio de Proyectos,Edson Neves,Leandro Ezequiel,OC Routing LM,Routing,FM&LM,Latam,Comunicado/Publicado
+Portfolio de Proyectos,Victor Salas,Natalia Lisboa,Documentación Veicular,Fleet Mgmt,Ecosystem,Latam,Comunicado/Publicado
+Portfolio de Proyectos,Edson Neves,Tiago Domingos,Fleet Planning D-1,Fleet Planning LM,FM&LM,Latam,Comunicado/Publicado
+Portfolio de Proyectos,Edson Neves,Amaia Galan,IT Monitoreo/TOC (XD/FM) - Actualizacion de Processos,TOC & Monitoring,FM&LM,Latam,Comunicado/Publicado
+Portfolio de Proyectos,Edson Neves,Natalia Longobucco,Sleepover (Drivers),Driver XP,Ecosystem,Latam,Comunicado/Publicado
+Portfolio de Proyectos,Edson Neves,Natalia Longobucco,IT VIaje Obligatório - Vinculación de Travel ID y Route ID,Driver XP,Ecosystem,Latam,Comunicado/Publicado
+Portfolio de Proyectos,Edson Neves,Viviane Mansour,IT Carrier Management (Silos) - Mejora en la gobernanza,MLP XP,Ecosystem,Latam,Comunicado/Publicado
+Portfolio de Proyectos,Edson Neves,Virginia Rocco,LH Candado Scheduling - Implementación de bloqueo,Linehaul,Linehaul,Latam,Comunicado/Publicado
+Portfolio de Proyectos,Victor Salas,Juan P.,Integración API Carriers - Fase 1,Linehaul,Linehaul,Latam,Comunicado/Publicado
+Portfolio de Proyectos,Edson Neves,Kristina Sarquiz,Mejora UI Driver App - Feedback loop,Driver XP,Ecosystem,Brasil,Comunicado/Publicado
+Portfolio de Proyectos,Edson Neves,Viviane Mansour,Capacitación Nuevos Ops - Material actualizado,MLP XP,Ecosystem,Latam,Comunicado/Publicado
+Portfolio de Proyectos,Edson Neves,Viviane Mansour,Revisión Accesos - Auditoría trimestral,MLP XP,Ecosystem,Latam,Comunicado/Publicado
+Portfolio de Proyectos,Edson Neves,Agustina Moure,Boosters por nodo - Tarifas rutas Extra Nodos,Extra/Crowd,Crowd,Latam,Comunicado/Publicado
+Portfolio de Proyectos,Edson Neves,Carlos M.,Expansión Cobertura MCO - Nuevas zonas,Extra/Crowd,Crowd,MCO,Comunicado/Publicado
+Portfolio de Proyectos,Alejandro Caliz,Maria L.,Nuevo Panel de Control - Visualización en tiempo real,Transv.,ALL,Latam,Comunicado/Publicado
+Portfolio de Proyectos,Alejandro Caliz,Ana R.,Autom. Report Incidencias - Reducción manual,Transv.,ALL,Latam,Comunicado/Publicado
+Portfolio de Proyectos,Alejandro Caliz,Finance,Cierre Fiscal Q4 - Ajustes finales,Transv.,ALL,Latam,Comunicado/Publicado`;
+
+const PROC_DATA=[{"MILLA": "FIRST MILE", "TRIBU": "FM + LM", "MASTER TRIBU": "FM&LM", "TEMA": "FM Speed", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLB", "WI donde se encuentra el proceso/tema": "WI_FM_Speed", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "06/02/2023", "TIPO ATUALIZACION": "Portifolio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WI_FM_Speed_PT_V0", "WI ES": "WI_FM_Speed_ES_V0", "VERSION WI": "0", "FECHA CREACIÓN WI": "06/02/2023", "Link": "https://docs.google.com/document/d/1L3a1v2b4_lgWJQpSKpICIaeU7zfC42Dfk_IZvuyM0jo/edit?tab=t.0"}, {"MILLA": "LINEHAUL", "TRIBU": "Fleet Planning LM", "MASTER TRIBU": "FM&LM", "TEMA": "Requerimiento de flota", "NATUREZA": "Core", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI Requerimiento de flota", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "05/03/2025", "TIPO ATUALIZACION": "Workshop", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WI Requerimento de frota  LM PT", "WI ES": "WI Requerimiento de flota  LM ES", "VERSION WI": "1", "FECHA CREACIÓN WI": "30/12/2024", "Link": "https://docs.google.com/document/d/1_C5CZ_fb8SdsJZ5H7applfk-IvAVt_tBl0TQPEiUOl8/edit?tab=t.0"}, {"MILLA": "LAST MILE", "TRIBU": "Fleet Planning LM", "MASTER TRIBU": "FM&LM", "TEMA": "Fleet Planning", "NATUREZA": "Core", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI_Fleet Planning D-1", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "30/09/2025", "TIPO ATUALIZACION": "Portifolio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WI_Fleet Planning D-1_V0_PT", "WI ES": "WI_Fleet Planning D-1_V0_ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "30/09/2025", "Link": "https://docs.google.com/document/d/1UBJo0ilPmMv81aI_J9gkaIjSDMmsS12AUYBgOGo48eY/edit?tab=t.0"}, {"MILLA": "FIRST MILE", "TRIBU": "Routing", "MASTER TRIBU": "FM&LM", "TEMA": "RBM Projeções FM", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI_Roteador By MELI_FM_Projeções", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "05/03/2025", "TIPO ATUALIZACION": "Workshop", "PUNTOS ACTUALIZADOS": "INFOWOW_2025_Q1 y Q2", "WI PT": "WI_Roteador By MELI_FM_Projeções_PT", "WI ES": "WI_Ruteador By MELI_FM_Proyecciones_ES", "VERSION WI": "1", "FECHA CREACIÓN WI": "25/11/2024", "Link": "https://docs.google.com/document/d/1Qh9s19kdaTakhUCmVtx4zJe0iFqC7CqSPZLikWc9AKc/edit?tab=t.0"}, {"MILLA": "FIRST MILE", "TRIBU": "Routing", "MASTER TRIBU": "FM&LM", "TEMA": "RBM Ruteo FM 1.0", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI_Roteador By MELI_FM_Roteirização", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "25/11/2024", "TIPO ATUALIZACION": "Portifolio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WI_Roteador By MELI_FM_Roteirização_PT", "WI ES": "WI_Ruteador By MELI_FM_Ruteo_ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "25/11/2024", "Link": "https://docs.google.com/document/d/1ikvlTW7UorP7ipzLbm6Wk5uber3Ce5sP7Ic33Q1kYJs/edit?tab=t.0"}, {"MILLA": "FIRST MILE", "TRIBU": "Routing", "MASTER TRIBU": "FM&LM", "TEMA": "RBM Rutas adicionales y publicación FM", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI_Ruteador By MELI_FM_Rutas adicionales y publicación", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "25/11/2024", "TIPO ATUALIZACION": "Portifolio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WI_Roteador By MELI_FM_Rotas adicionais e publicação_PT", "WI ES": "WI_Ruteador By MELI_FM_Rutas adicionales y publicación_ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "25/11/2024", "Link": "https://docs.google.com/document/d/1QWEkpIlt3Cab4e1xMeKV8MYBK6eICxtzHb73UI_4lig/edit?tab=t.0#heading=h.3dy6vkm"}, {"MILLA": "FIRST MILE", "TRIBU": "Routing", "MASTER TRIBU": "FM&LM", "TEMA": "RBM 2.0 FM", "NATUREZA": "Core", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI_Routing By Meli 2.0", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "17/09/2025", "TIPO ATUALIZACION": "Portifolio", "PUNTOS ACTUALIZADOS": "INFO WOW_2025_Q3", "WI PT": "WI_Routing By Meli 2.0_V0_PT", "WI ES": "WI_Routing By Meli 2.0_V0_ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "17/09/2025", "Link": "https://docs.google.com/document/d/1kS1wSkwp0JQkfrySG1P_MyttKzdqkiogvUu0EbPHSVw/edit?tab=t.0"}, {"MILLA": "FIRST MILE", "TRIBU": "FM + LM", "MASTER TRIBU": "FM&LM", "TEMA": "Rutas Mixtas", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLM", "WI donde se encuentra el proceso/tema": "WI_Rutas Mixtas MLM", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "02/10/2023", "TIPO ATUALIZACION": "Portifolio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WI_Rutas Mixtas MLM_PT_V0", "WI ES": "WI_Rutas Mixtas MLM_ES_V0", "VERSION WI": "0", "FECHA CREACIÓN WI": "02/10/2023", "Link": "https://docs.google.com/document/d/168p4sEUH23nXRUQZIFmH_uNjsBpqVPo5pONrKPJZFxw/edit?tab=t.0#heading=h.3znysh7"}, {"MILLA": "FIRST MILE", "TRIBU": "Seller Ops & XP", "MASTER TRIBU": "Ecosystem", "TEMA": "Upgrade & Downgrade Sellers", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI_Upgrade & Downgrade_FM", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "05/03/2025", "TIPO ATUALIZACION": "Workshop", "PUNTOS ACTUALIZADOS": "INFOWOW_2025_Q1 y Q2", "WI PT": "WI_Upgrade & Downgrade_FM_PT", "WI ES": "WI_Upgrade & Downgrade_FM_ES", "VERSION WI": "2", "FECHA CREACIÓN WI": "21/05/2024", "Link": "https://docs.google.com/document/d/1V9GwSTHA7JiP-JJFwCZWEumcjFLFo5ZZ60TbR-5BjnA/edit?tab=t.0"}, {"MILLA": "FIRST MILE", "TRIBU": "FM + LM", "MASTER TRIBU": "FM&LM", "TEMA": "Flujo de Siniestros FM para Full", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI_Flujo de Siniestros_FM", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "16/10/2023", "TIPO ATUALIZACION": "Portifolio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WI_Fluxo de Sinistros_FM_PT_V0", "WI ES": "WI_Flujo de Siniestros_FM_ES", "VERSION WI": "2", "FECHA CREACIÓN WI": "08/03/2023", "Link": "https://docs.google.com/document/d/1s9n-3ou8sMXTbjQxUTMVADGJStlkt7pctOiGompQEu8/edit?tab=t.0"}, {"MILLA": "FIRST MILE", "TRIBU": "FM + LM", "MASTER TRIBU": "FM&LM", "TEMA": "Colecta y Entrega de FM para Full", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI_Colecta y Entrega de FM para FBM", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "22/05/2024", "TIPO ATUALIZACION": "Portifolio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WI_Colecta e Entrega FM para FBM_PT_V2", "WI ES": "WI_Colecta y Entrega de FM para FBM_ES_V2", "VERSION WI": "2", "FECHA CREACIÓN WI": "08/03/2023", "Link": "https://docs.google.com/document/d/1hOGHWWEkXdcwf-UpZE0Rp08rlwrRLqdZAcNBqG-Wv_w/edit?tab=t.0"}, {"MILLA": "FIRST MILE", "TRIBU": "Routing", "MASTER TRIBU": "FM&LM", "TEMA": "Atribuciones de rutas", "NATUREZA": "Core", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI_FM_Ejecución_Atribuciones de rutas", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "03/12/2024", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WI_FM_Execução_Atribuição de rotas_PT", "WI ES": "WI_FM_Ejecución_Atribuciones de rutas_ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "03/12/2024", "Link": "https://docs.google.com/document/d/104ChaA5FWbpM7HJ1BMOcJzeyGCV1mxJVFt5SoaivEJw/edit?tab=t.0"}, {"MILLA": "FIRST MILE", "TRIBU": "FM + LM", "MASTER TRIBU": "FM&LM", "TEMA": "Driver Entrega en el XD", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI_Driver_Entrega en el XD", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "27/05/2024", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WI_Driver_Entrega no XD_PT_V2", "WI ES": "WI_Driver_Entrega en el XD_ES_V2", "VERSION WI": "2", "FECHA CREACIÓN WI": "25/10/2022", "Link": "https://docs.google.com/document/d/1zz2WEu0N-iTmY7w3gJIZsPT5PM4uhAhc-D3IxsD8pzE/edit?tab=t.0#heading=h.cjng41wxeoxf"}, {"MILLA": "FIRST MILE", "TRIBU": "FM + LM", "MASTER TRIBU": "FM&LM", "TEMA": "Driver Colectas FM para Full", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI_Driver_Colectas FBM", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "14/06/2024", "TIPO ATUALIZACION": "Portifolio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WI_Driver_Coletas FBM_PT_V0", "WI ES": "WI_Driver_Colectas FBM_ES_V0", "VERSION WI": "0", "FECHA CREACIÓN WI": "14/06/2024", "Link": "https://docs.google.com/document/d/19mXTiP7VZGO7aCK01T-W3KAw2hN0yA3rvXfyD_JWyeA/edit?tab=t.0"}, {"MILLA": "FIRST MILE", "TRIBU": "FM + LM", "MASTER TRIBU": "FM&LM", "TEMA": "Definición de la capacidad del panel para FM/Full", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLB", "WI donde se encuentra el proceso/tema": "WIL_Definición de la capacidad del panel para FM/FBM_FM", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "23/07/2024", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WIL_Definição da Capacidade de Painel para FM/FBM_FM_PT_V0", "WI ES": "WIL_Definición de la capacidad del panel para FM/FBM_FM_ES_V0", "VERSION WI": "0", "FECHA CREACIÓN WI": "23/07/2024", "Link": "https://docs.google.com/document/d/1rQsydmp7-n1KSKqMJIOPLPSZbpqXDQ601HC09JZCyoE/edit?tab=t.0#heading=h.y2zandily4k"}, {"MILLA": "FIRST MILE", "TRIBU": "Routing", "MASTER TRIBU": "FM&LM", "TEMA": "Pre Routing By Meli", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLB", "WI donde se encuentra el proceso/tema": "WIL_OTR_FIRST MILE_PRE ROUTING BYMELI", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "10/06/2025", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WIL_OTR_FIRST MILE_PRÉ ROTEIRIZAÇÃO BYMELI _MLB_PT", "WI ES": "WIL_OTR_FIRST MILE_PRE ROUTING BYMELI _MLB_ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "10/06/2025", "Link": "https://docs.google.com/document/d/18f-HgRCE2q1-WcoAggOP_A1FMnoI8URawIn6qvvNbG8/edit?tab=t.0#heading=h.li3jdfoi9qmb"}, {"MILLA": "FIRST MILE", "TRIBU": "Routing", "MASTER TRIBU": "FM&LM", "TEMA": "Análisis y ejecución de la planificación", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLB, MLC, MCO, MLU, MLA", "WI donde se encuentra el proceso/tema": "WI_FM_Ejecución_ Análisis y ejecución de la planificación", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "05/03/2025", "TIPO ATUALIZACION": "Workshop", "PUNTOS ACTUALIZADOS": "INFOWOW_2025_Q1 y Q2", "WI PT": "WI_FM_Execução_Análise e execução do planejamento _PT", "WI ES": "WI_FM_Ejecución_ Análisis y ejecución de la planificación _ES", "VERSION WI": "1", "FECHA CREACIÓN WI": "03/12/2024", "Link": "https://docs.google.com/document/d/1rvr3WLb1nCz4PQzBkMdKEvAX9t2CKNgMSHYzhOrAd1I/edit?tab=t.0"}, {"MILLA": "FIRST MILE", "TRIBU": "FM + LM", "MASTER TRIBU": "FM&LM", "TEMA": "Supplier Program FM & LM", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLB", "WI donde se encuentra el proceso/tema": "WIL_Supplier Program_FM e LM", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "23/07/2024", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WIL_Supplier Program_FM e LM_PT_V0", "WI ES": "WIL_Supplier Program_FM e LM_ES_V0", "VERSION WI": "0", "FECHA CREACIÓN WI": "23/07/2024", "Link": "https://docs.google.com/document/d/1_KHKvQ2WXQGIPIWytte9zBS3aN3Vg6pA-ks9VfG3FHU/edit?tab=t.0"}, {"MILLA": "FIRST MILE", "TRIBU": "Seller Ops & XP", "MASTER TRIBU": "Ecosystem", "TEMA": "Seller Multi Ware House FM", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLM", "WI donde se encuentra el proceso/tema": "FM - Seller Multi Ware House", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "25/04/2023", "TIPO ATUALIZACION": "Portifolio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "FM - Seller Multi Ware House - PT", "WI ES": "FM - Seller Multi Ware House ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "25/04/2023", "Link": "https://docs.google.com/document/d/135C00WOvJNKpvpjmCyCWooexjJfOZegQ2d-9HfImLCM/edit?tab=t.0"}, {"MILLA": "FIRST MILE", "TRIBU": "Scheduling", "MASTER TRIBU": "FM&LM", "TEMA": "Scheduling FM", "NATUREZA": "Core", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI_OTR_First Mile_Scheduling", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "30/09/2025", "TIPO ATUALIZACION": "Workshop", "PUNTOS ACTUALIZADOS": "INFO WOW_2025_Q3", "WI PT": "WI_OTR_FIRST MILE_SCHEDULING_LATAM_PT", "WI ES": "WI_OTR_FIRST MILE_SCHEDULING_LATAM_ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "30/09/2025", "Link": "https://docs.google.com/document/d/14khgZsaEXQWwDbu2zz5vwbuu5oliIKQLyeQs97bJna0/edit?tab=t.0"}, {"MILLA": "FIRST MILE, LAST MILE", "TRIBU": "Fleet Mgmt", "MASTER TRIBU": "Ecosystem", "TEMA": "Control de Disponibilidad y Mantenimiento de Flota Fija", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLM, MLB, MLC", "WI donde se encuentra el proceso/tema": "WIL _Flota Fija_Control de Disponibilidad y Mantenimiento de Flota Fija MLM", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "28/10/2025", "TIPO ATUALIZACION": "Workshop", "PUNTOS ACTUALIZADOS": "89. Comunicación de cambios - 28/10/2025", "WI PT": "WIL_FROTA FIXA_GESTÃO EFICAZ DE FROTAS - CONTROLE DE DISPONIBILIDADE E MANUTENÇÃO MLM_PT", "WI ES": "WIL_FROTA FIXA_GESTÃO EFICAZ DE FROTAS - CONTROLE DE DISPONIBILIDADE E MANUTENÇÃO MLM_ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "28/10/2025", "Link": "https://docs.google.com/document/d/1gxKqsdAg9pQLv4JOyTEUXf0hu5fe-vIg3UuckCgsQDQ/edit?tab=t.0"}, {"MILLA": "FIRST MILE, LAST MILE", "TRIBU": "Fleet Mgmt", "MASTER TRIBU": "Ecosystem", "TEMA": "Movilización y Desmovilización Flota Fija", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLM", "WI donde se encuentra el proceso/tema": "WIL_FROTA FIXA - Movilización y Desmovilización MLM", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "28/10/2025", "TIPO ATUALIZACION": "Workshop", "PUNTOS ACTUALIZADOS": "89. Comunicación de cambios - 28/10/2025", "WI PT": "WIL_FROTA FIXA_MOBILIZAÇÃO E DESMOBILIZAÇÃO MLM_PT", "WI ES": "WIL_FROTA FIXA_MOBILIZAÇÃO E DESMOBILIZAÇÃO MLM_ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "28/10/2025", "Link": "https://docs.google.com/document/d/1iZFbcCVcE1wdTCr_tROPEUbvj1cb3vqu9b6q7mIOizk/edit?tab=t.0"}, {"MILLA": "FIRST MILE, LAST MILE", "TRIBU": "Fleet Mgmt", "MASTER TRIBU": "Ecosystem", "TEMA": "Control de Utilización de Flotas Fijas", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLM", "WI donde se encuentra el proceso/tema": "WIL_FROTA FIXA - Control de Utilización de Flotas MLM", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "28/10/2025", "TIPO ATUALIZACION": "Workshop", "PUNTOS ACTUALIZADOS": "89. Comunicación de cambios - 28/10/2025", "WI PT": "WIL_FROTA FIXA_CONTROLE DE UTILIZAÇÃO DE FROTAS MLM_PT", "WI ES": "WIL_FROTA FIXA_CONTROLE DE UTILIZAÇÃO DE FROTAS MLM_ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "28/10/2025", "Link": "https://docs.google.com/document/d/1dECQR032gS0T66q1E_-Sn1V-mL9fMoyL7tCsax8044w/edit?tab=t.0"}, {"MILLA": "FIRST MILE, LAST MILE", "TRIBU": "Fleet Mgmt", "MASTER TRIBU": "Ecosystem", "TEMA": "Checklist y Telemetria Flota Fija", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLM", "WI donde se encuentra el proceso/tema": "WIL_FROTA FIXA - Safety - CHECKLIST, TELEMETRÍA y DOCUMENTACIÓN MLM", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "28/10/2025", "TIPO ATUALIZACION": "Workshop", "PUNTOS ACTUALIZADOS": "89. Comunicación de cambios - 28/10/2025", "WI PT": "WIL_FROTA FIXA_CHECKLIST, TELEMETRÍA MLM_PT", "WI ES": "WIL_FLOTA FIJA_CHECKLIST, TELEMETRÍA MLM_ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "28/10/2025", "Link": "https://docs.google.com/document/d/1L7gZwsJdsvyBl2hWoBbXpkQDdnewoBynySBaXtTCFcs/edit?tab=t.0"}, {"MILLA": "LAST MILE", "TRIBU": "Scheduling", "MASTER TRIBU": "FM&LM", "TEMA": "Scheduling LM", "NATUREZA": "Core", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI_OTR_LAST MILE_SCHEDULING", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "11/11/2025", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "INFO WOW_2025_Q4", "WI PT": "WI_OTR_LAST MILE_SCHEDULING_LATAM_PT", "WI ES": "WI_OTR_LAST MILE_SCHEDULING_LATAM_ES", "VERSION WI": "3", "FECHA CREACIÓN WI": "30/09/2025", "Link": "https://docs.google.com/document/d/1OjR4eXpzdRbXf7QDw_IlDrUjUllkUDLkjwsCG5VYm7c/edit?tab=t.0#heading=h.fkqqe5d4xfwe"}, {"MILLA": "FIRST MILE", "TRIBU": "Seller Ops & XP", "MASTER TRIBU": "Ecosystem", "TEMA": "Experiencia Operacional Sellers", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLB", "WI donde se encuentra el proceso/tema": "WI_FM_Experiencia Operacional", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "06/02/2023", "TIPO ATUALIZACION": "Portifolio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WI_FM_Experiencia Operacional_PT_V0", "WI ES": "WI_FM_Experiencia Operacional_ES_V0", "VERSION WI": "0", "FECHA CREACIÓN WI": "06/02/2023", "Link": "https://docs.google.com/document/d/1k3DXdrzmGtFpEVueSFSpHXnDon_pGCwNjZTkqsD3Jaw/edit?tab=t.0"}, {"MILLA": "LAST MILE", "TRIBU": "Scheduling", "MASTER TRIBU": "FM&LM", "TEMA": "Roustering LM", "NATUREZA": "Core", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI Rostering", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "05/03/2025", "TIPO ATUALIZACION": "Workshop", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WI Rostering  LM PT", "WI ES": "WI Rostering LM ES", "VERSION WI": "1", "FECHA CREACIÓN WI": "30/12/2024", "Link": "https://docs.google.com/document/d/13dgOTlGd4r5V9L6ScZTGTRvkR8Q10cH2WIRvjEZEejw/edit?tab=t.0"}, {"MILLA": "FIRST MILE", "TRIBU": "FM + LM", "MASTER TRIBU": "FM&LM", "TEMA": "FUP MLPs", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLB", "WI donde se encuentra el proceso/tema": "WIL_FUP MLPs_FM", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "23/07/2024", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WIL_FUP MLPs_FM_PT_V0", "WI ES": "WIL_FUP MLPs_FM_ES_V0", "VERSION WI": "0", "FECHA CREACIÓN WI": "23/07/2024", "Link": "https://docs.google.com/document/d/1FQFC9IqeYJ1lB4Ow6Odtv9cyHe2VnSMbO8RoeHGcBjw/edit?tab=t.0"}, {"MILLA": "FIRST MILE", "TRIBU": "TOC & Monitoring", "MASTER TRIBU": "FM&LM", "TEMA": "Monitoreo de rutas FM", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI_FM_Monitoreo de rutas XD", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "14/10/2025", "TIPO ATUALIZACION": "Portifolio", "PUNTOS ACTUALIZADOS": "88. Comunicación de cambios - 14/10/2025", "WI PT": "WI_FM_Monitoreo de rutas XD_ES_V0", "WI ES": "WI_FM_Monitoreo de rutas XD_ES_V0", "VERSION WI": "2", "FECHA CREACIÓN WI": "27/05/2024", "Link": "https://docs.google.com/document/d/1B-SeZmmW8YfVxDB5RlV9XV3R1gmLEtIpsy_YlNgJufE/edit?tab=t.0"}, {"MILLA": "FIRST MILE", "TRIBU": "FM + LM", "MASTER TRIBU": "FM&LM", "TEMA": "Gestión de rutas de MeliOne", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI_Gestión de rutas de MeliOne", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "05/03/2025", "TIPO ATUALIZACION": "Workshop", "PUNTOS ACTUALIZADOS": "INFOWOW_2025_Q1 y Q2", "WI PT": "WI_Gestão de rotas do MeliOne_PT_V0", "WI ES": "WI_Gestión de rutas de MeliOne_ES_V0", "VERSION WI": "1", "FECHA CREACIÓN WI": "15/05/2024", "Link": "https://docs.google.com/document/d/1etp0NHSI8mtWu5oWpuSqHvo413sq04dkhLi8o--qlOk/edit?tab=t.0"}, {"MILLA": "FIRST MILE", "TRIBU": "FM + LM", "MASTER TRIBU": "FM&LM", "TEMA": "Colecta H&B", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLA, MLC, MLU", "WI donde se encuentra el proceso/tema": "WIL_COLECTA_FM_H&B_CONO SUR", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "30/06/2025", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WIL_COLECTA_FM_H&B_CONO SUR_PT", "WI ES": "WIL_COLECTA_FM_H&B_CONO SUR_ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "30/06/2025", "Link": "https://docs.google.com/document/d/1WAwRuqlhCV0YuxDsEDzxUYnYS79ZtbAw8897jg-DIRs/edit?tab=t.0"}, {"MILLA": "FIRST MILE", "TRIBU": "TOC & Monitoring", "MASTER TRIBU": "FM&LM", "TEMA": "Monitoreo de rutas FM para Full", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI_FM_Monitoreo de rutas FBM", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "27/05/2024", "TIPO ATUALIZACION": "Portifolio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WI_FM_Monitoramento de rutas FBM_PT_V0", "WI ES": "WI_FM_Monitoreo de rutas FBM_ES_V0", "VERSION WI": "0", "FECHA CREACIÓN WI": "27/05/2024", "Link": "https://docs.google.com/document/d/16zIPxRsnRHjP1m7ty_dBFYX4UYxRfwPSml5U8lP8uOQ/edit?tab=t.0"}, {"MILLA": "FIRST MILE", "TRIBU": "TOC & Monitoring", "MASTER TRIBU": "FM&LM", "TEMA": "Gestión de TOC para FM", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI_Gestión de TOC para FM XD", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "14/10/2025", "TIPO ATUALIZACION": "Portifolio", "PUNTOS ACTUALIZADOS": "88. Comunicación de cambios - 14/10/2025", "WI PT": "WI_Gestão de TOC para FM XD_PT", "WI ES": "WI_Gestión de TOC para FM XD_ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "14/10/2025", "Link": "https://docs.google.com/document/d/149YDSOudAABnpBnZ_v84okWyJInHKxvhfj5Bye6rsrs/edit?tab=t.0#heading=h.jmsc2wo3x4gu"}, {"MILLA": "FIRST MILE, LAST MILE", "TRIBU": "Fleet Mgmt", "MASTER TRIBU": "Ecosystem", "TEMA": "Medición y Prefacturación de la Flota Fija", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLB", "WI donde se encuentra el proceso/tema": "WIL_Medición y Prefacturación de la Flota Fija", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "13/05/2025", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WI MEDICAÇAÕ DE PRE FATURAMENTO FF", "WI ES": "WIL_Medición y Prefacturación de la Flota Fija_ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "13/05/2025", "Link": "https://docs.google.com/document/d/1NnVQLAX7-UnQn0zNjczwzSCsm-jSrefxeTWZR6dMFQg/edit?tab=t.0"}, {"MILLA": "FIRST MILE, LAST MILE", "TRIBU": "Fleet Mgmt", "MASTER TRIBU": "Ecosystem", "TEMA": "Calendarização da Frota Fixa", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLB", "WI donde se encuentra el proceso/tema": "WIL Calendarização da Frota Fixa", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "13/05/2025", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WIL Calendarização da Frota Fixa_PT", "WI ES": "WIL Calendarização da Frota Fixa_ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "13/05/2025", "Link": "https://docs.google.com/document/d/1u0LVtbD_1xkYmGh8ztzSKi-tf7c0UntN7B-AVGE1L9k/edit?tab=t.0"}, {"MILLA": "FIRST MILE", "TRIBU": "Seller Ops & XP", "MASTER TRIBU": "Ecosystem", "TEMA": "Upgrade & Downgrade Sellers", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLB", "WI donde se encuentra el proceso/tema": "WIL_Seller Migration (Upgrade, Downgrade e Migration)_FM", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "13/05/2025", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WIL_Seller Migration (Upgrade, Downgrade e Migration)_FM_MLB PT", "WI ES": "WIL_Seller Migration (Upgrade, Downgrade e Migration)_FM_MLB ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "13/05/2025", "Link": "https://docs.google.com/document/d/1ztwZHaumkesSy2xkW0io3sbaMct4-VtV5ypgYluWCwg/edit?tab=t.0"}, {"MILLA": "LAST MILE", "TRIBU": "TOC & Monitoring", "MASTER TRIBU": "FM&LM", "TEMA": "Monitoreo de rutas LM", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI_Monitoreo de ruta LM", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "28/10/2025", "TIPO ATUALIZACION": "Portifolio", "PUNTOS ACTUALIZADOS": "89. Comunicación de cambios - 28/10/2025", "WI PT": "WI_Monitoreo de ruta LM OTR_ PT", "WI ES": "WI_Monitoreo de ruta LM OTR_ES", "VERSION WI": "7", "FECHA CREACIÓN WI": "11/06/2024", "Link": "https://docs.google.com/document/d/1ugZ2oJyx0F32_jWRUaM36uWcgawUrGh7Kc5QyaDHZCs/edit?tab=t.0#heading=h.hf07uxh9fcfv"}, {"MILLA": "FIRST MILE, LAST MILE", "TRIBU": "Fleet Mgmt", "MASTER TRIBU": "Ecosystem", "TEMA": "Movilización y Desmovilización Flota Fija", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLB", "WI donde se encuentra el proceso/tema": "WIL_FROTA FIXA - Movilización y Desmovilización MLB", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "28/10/2025", "TIPO ATUALIZACION": "Workshop", "PUNTOS ACTUALIZADOS": "89. Comunicación de cambios - 28/10/2025", "WI PT": "WIL_FROTA FIXA_MOBILIZAÇÃO E DESMOBILIZAÇÃO MLB_PT", "WI ES": "WIL_FROTA FIXA_MOBILIZAÇÃO E DESMOBILIZAÇÃO MLB_ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "28/10/2025", "Link": "https://docs.google.com/document/d/1b2SYbAsz86LvTT5d5q-ogZNXZP2Tjs6dF8Afim1MF0o/edit?tab=t.0"}, {"MILLA": "FIRST MILE, LAST MILE", "TRIBU": "Fleet Mgmt", "MASTER TRIBU": "Ecosystem", "TEMA": "Control de Utilización de Flotas Fijas", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLB", "WI donde se encuentra el proceso/tema": "WIL_FROTA FIXA - Control de Utilización de Flotas MLB", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "28/10/2025", "TIPO ATUALIZACION": "Workshop", "PUNTOS ACTUALIZADOS": "89. Comunicación de cambios - 28/10/2025", "WI PT": "WIL_FROTA FIXA_CONTROLE DE UTILIZAÇÃO DE FROTAS MLB_PT", "WI ES": "WIL_FROTA FIXA_CONTROLE DE UTILIZAÇÃO DE FROTAS MLB_ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "28/10/2025", "Link": "https://docs.google.com/document/d/1D_9mkhic0k4tUHOkfiJXx-GyVgfX-53-snTDS-GxxCY/edit?tab=t.0"}, {"MILLA": "FIRST MILE, LAST MILE", "TRIBU": "Fleet Mgmt", "MASTER TRIBU": "Ecosystem", "TEMA": "Checklist y Telemetria Flota Fija", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLB", "WI donde se encuentra el proceso/tema": "WIL_FROTA FIXA - Safety - CHECKLIST, TELEMETRÍA y DOCUMENTACIÓN MLB", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "28/10/2025", "TIPO ATUALIZACION": "Workshop", "PUNTOS ACTUALIZADOS": "89. Comunicación de cambios - 28/10/2025", "WI PT": "WIL_FROTA FIXA_CHECKLIST, TELEMETRÍA e DOCUMENTAÇÃO MLB_PT", "WI ES": "WIL_FLOTA FIJA_CHECKLIST, TELEMETRÍA y DOCUMENTACIÓN MLB_ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "28/10/2025", "Link": "https://docs.google.com/document/d/1B7Zb9ZlX4Kru9eZH6IdeCA-Dl-GAJW5kvnQ6_5VEJYs/edit?tab=t.0"}, {"MILLA": "FIRST MILE, LAST MILE", "TRIBU": "Fleet Mgmt", "MASTER TRIBU": "Ecosystem", "TEMA": "Control de Disponibilidad y Mantenimiento de Flota Fija", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLB", "WI donde se encuentra el proceso/tema": "WIL _Flota Fija_Control de Disponibilidad y Mantenimiento de Flota Fija MLB", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "28/10/2025", "TIPO ATUALIZACION": "Workshop", "PUNTOS ACTUALIZADOS": "89. Comunicación de cambios - 28/10/2025", "WI PT": "WIL_FROTA FIXA_GESTÃO EFICAZ DE FROTAS - CONTROLE DE DISPONIBILIDADE E MANUTENÇÃO MLB_PT", "WI ES": "WIL_FROTA FIXA_GESTÃO EFICAZ DE FROTAS - CONTROLE DE DISPONIBILIDADE E MANUTENÇÃO MLB_ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "28/10/2025", "Link": "https://docs.google.com/document/d/10td7ReZfxFQo_PL8Z6-hcZ8UxkQcxpp8pR2cysYRUGs/edit?tab=t.0"}, {"MILLA": "FIRST MILE", "TRIBU": "FM + LM", "MASTER TRIBU": "FM&LM", "TEMA": "Dispatcher FM Kangu", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLB", "WI donde se encuentra el proceso/tema": "WIL_Dispatcher FM Kangu_FM", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "22/07/2025", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "INFO WOW_2025_Q3", "WI PT": "WIL_Dispatcher FM Kangu_FM_PT_V0", "WI ES": "WIL_Dispatcher FM Kangu_FM_ES_V0", "VERSION WI": "1", "FECHA CREACIÓN WI": "23/07/2024", "Link": "https://docs.google.com/document/d/1AZ7r8Z27_mZ66LER-3Jej9btaXAIWlPs3aUW9ghqi68/edit?tab=t.0"}, {"MILLA": "FIRST MILE, LAST MILE", "TRIBU": "Fleet Mgmt", "MASTER TRIBU": "Ecosystem", "TEMA": "Movilización y Desmovilización Flota Fija", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLC", "WI donde se encuentra el proceso/tema": "WIL_FROTA FIXA - Movilización y Desmovilización MLC", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "28/10/2025", "TIPO ATUALIZACION": "Workshop", "PUNTOS ACTUALIZADOS": "89. Comunicación de cambios - 28/10/2025", "WI PT": "WIL_FROTA FIXA_MOBILIZAÇÃO E DESMOBILIZAÇÃO MLC_PT", "WI ES": "WIL_FROTA FIXA_MOBILIZAÇÃO E DESMOBILIZAÇÃO MLC_ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "28/10/2025", "Link": "https://docs.google.com/document/d/1vw28dpJblA5tFsetgsH8vTyP5yaO51fKGbT1c6GuctI/edit?tab=t.0"}, {"MILLA": "FIRST MILE, LAST MILE", "TRIBU": "Fleet Mgmt", "MASTER TRIBU": "Ecosystem", "TEMA": "Checklist y Telemetria Flota Fija", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLC", "WI donde se encuentra el proceso/tema": "WIL_FROTA FIXA - Safety - CHECKLIST, TELEMETRÍA y DOCUMENTACIÓN MLC", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "28/10/2025", "TIPO ATUALIZACION": "Workshop", "PUNTOS ACTUALIZADOS": "89. Comunicación de cambios - 28/10/2025", "WI PT": "WIL_FROTA FIXA_TELEMETRÍA MLC_PT", "WI ES": "WIL_FLOTA FIJA_TELEMETRÍA MLC_ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "28/10/2025", "Link": "https://docs.google.com/document/d/1ybLAWCgHdZH67gEJH38_T-8uAyQfqAAAWvfd7SGDRmg/edit?tab=t.0"}, {"MILLA": "LAST MILE", "TRIBU": "Planning Ops", "MASTER TRIBU": "FM&LM", "TEMA": "Forecast", "NATUREZA": "Core", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI Forecast LM", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "05/03/2025", "TIPO ATUALIZACION": "Workshop", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WI Forecast LM PT", "WI ES": "WI Forecast LM ES", "VERSION WI": "1", "FECHA CREACIÓN WI": "30/12/2024", "Link": "https://docs.google.com/document/d/1-EJEsMYFToF3fx0CXiC6EHiJ6H1L5svWy7UMOjR5tVM/edit?tab=t.0"}, {"MILLA": "FIRST MILE", "TRIBU": "FM + LM", "MASTER TRIBU": "FM&LM", "TEMA": "First Mile Colectas Offline", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLB", "WI donde se encuentra el proceso/tema": "WIL_FM_FIRST MILE_COLECTAS OFF LINE", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "27/08/2025", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WIL_FM_FIRST MILE_COLECTAS OFF LINE_MLB_PT", "WI ES": "WIL_FM_FIRST MILE_COLECTAS OFF LINE_MLB_ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "27/08/2025", "Link": "https://docs.google.com/document/d/1TxBOcSEcntO4sSIybOwWxGQLhodhrB7W3HzMbnMYFps/edit?tab=t.0"}, {"MILLA": "LAST MILE", "TRIBU": "Routing", "MASTER TRIBU": "FM&LM", "TEMA": "Routing LM 1.0", "NATUREZA": "Core", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI Routing LM", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "02/09/2025", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "INFO WOW_2025_Q3", "WI PT": "WI Routing LM_PT", "WI ES": "WI Routing LM_ES", "VERSION WI": "8", "FECHA CREACIÓN WI": "12/04/2022", "Link": "https://docs.google.com/document/d/14ZNOrOLvhhtS7-ZVPq6FiDp_UFf0LQzX6chbXX1VSfo/edit?tab=t.0"}, {"MILLA": "FIRST MILE", "TRIBU": "FM + LM", "MASTER TRIBU": "FM&LM", "TEMA": "Planning FM", "NATUREZA": "Core", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI_Planning FM", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "02/09/2025", "TIPO ATUALIZACION": "Workshop", "PUNTOS ACTUALIZADOS": "INFO WOW_2025_Q3", "WI PT": "WI_Planning FM_PT", "WI ES": "WI_Planning FM_ES", "VERSION WI": "2", "FECHA CREACIÓN WI": "20/05/2024", "Link": "https://docs.google.com/document/d/1iIgMWPipQACOm_cKiih8Ks9CLJmqouHuhztin55ung4/edit?tab=t.0"}, {"MILLA": "FIRST MILE", "TRIBU": "FM + LM", "MASTER TRIBU": "FM&LM", "TEMA": "Solicitud/Creación de Rutas Extra (Ambulancia FM)", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLB", "WI donde se encuentra el proceso/tema": "WIL_Solicitud/Creación de Rutas Extra (Ambulancia FM)", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "30/09/2025", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WIL_Solicitação/Criação de Rotas Avulsas (Ambulância FM) MLB_PT", "WI ES": "WIL_Solicitud/Creación de Rutas Extra (Ambulancia FM)_MLB_PT", "VERSION WI": "0", "FECHA CREACIÓN WI": "30/09/2025", "Link": "https://docs.google.com/document/d/14iBiHqSEFnKNwcwkufsKTu2kuwVG-mo9IGhzynQmRNo/edit?tab=t.0"}, {"MILLA": "FIRST MILE", "TRIBU": "FM + LM", "MASTER TRIBU": "FM&LM", "TEMA": "Driver Colectas FM", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI_Driver_Colectas_XD", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "11/11/2025", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "INFO WOW_2025_Q4", "WI PT": "WI_Driver_Coletas_XD_PT", "WI ES": "WI_Driver_Colectas_XD_ES", "VERSION WI": "10", "FECHA CREACIÓN WI": "14/10/2022", "Link": "https://docs.google.com/document/d/1rpKfYyTUH-BaVFZkSng7Asxs3zzvhUUi_xci8qE7kR0/edit?tab=t.0"}, {"MILLA": "LAST MILE", "TRIBU": "FM + LM", "MASTER TRIBU": "FM&LM", "TEMA": "Cancelaciones & No show", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLM", "WI donde se encuentra el proceso/tema": "WI Cancelaciones & No show", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "23/07/2024", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "INFOWOW_2024 Q1|Q2", "WI PT": "WI Cancelamentos e No shows_ PT", "WI ES": "WI Cancelaciones & No show _ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "23/07/2024", "Link": "https://docs.google.com/document/d/16Xi3fEW16km7m-GKLxI26ZxJETDwPG4ZFEO4AmVOca4/edit?tab=t.0"}, {"MILLA": "LAST MILE", "TRIBU": "FM + LM", "MASTER TRIBU": "FM&LM", "TEMA": "Places Pick Up", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLB", "WI donde se encuentra el proceso/tema": "WIL_Places Pick Up", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "19/09/2024", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WIL_Places Pick Up_LM_PT_V0", "WI ES": "WIL_Places Pick Up_LM_ES_V0", "VERSION WI": "0", "FECHA CREACIÓN WI": "19/09/2024", "Link": "https://docs.google.com/document/d/1ND4ShmDTZ-0jEal3WNoOBagKYDbd3zqoeuENU1iMZ-k/edit?tab=t.0"}, {"MILLA": "LAST MILE", "TRIBU": "FM + LM", "MASTER TRIBU": "FM&LM", "TEMA": "Drivers Newbies MLP", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLB", "WI donde se encuentra el proceso/tema": "WI Drivers Newbies MLP", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "15/10/2024", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WI Drivers Newbies MLP (Operacionais) PT", "WI ES": "WI Drivers Newbies MLP (Operación) ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "15/10/2024", "Link": "https://docs.google.com/document/d/1TOnuSms__vPle3NA4Is4MxCme4dfLoNhHqhNfhf-WFM/edit?tab=t.0#heading=h.30j0zll"}, {"MILLA": "LAST MILE", "TRIBU": "Routing", "MASTER TRIBU": "FM&LM", "TEMA": "1CR", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI_One Click Routing 2.0", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "17/09/2025", "TIPO ATUALIZACION": "Portifolio", "PUNTOS ACTUALIZADOS": "INFO WOW_2025_Q3", "WI PT": "WI_One Click Routing 2.0_V0_PT", "WI ES": "WI_One Click Routing 2.0_ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "17/09/2025", "Link": "https://docs.google.com/document/d/166pbLLMsOIWJU8MS817RwHhBGm-mUaCLQM3iFZSOvUQ/edit?tab=t.0"}, {"MILLA": "FIRST MILE, LAST MILE", "TRIBU": "MLP XP", "MASTER TRIBU": "Ecosystem", "TEMA": "Roles y Permisos MLP", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI _Carrier Management", "STATUS WI": "Pendente", "ULTIMA ATUALIZACIÓN WI": "06/01/2026", "TIPO ATUALIZACION": "Portifolio", "PUNTOS ACTUALIZADOS": "INFOWOW_2026_Q1 y Q2", "WI PT": "WI - Carrier Management_PT", "WI ES": "WI - Carrier Management_ES", "VERSION WI": "12", "FECHA CREACIÓN WI": "02/10/2023", "Link": "https://docs.google.com/document/d/1des4JX3H8oAn_DHMMr98rq7j0mwtCRg_8_p_yPI8b-8/edit?pli=1&tab=t.0#heading=h.eh219agtvf6d"}, {"MILLA": "LAST MILE", "TRIBU": "Crowd", "MASTER TRIBU": "Crowd", "TEMA": "ME Extra", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLB, MLM, MLC, MCO, MLA", "WI donde se encuentra el proceso/tema": "WI ME EXTRA PROCESOS", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "09/12/2025", "TIPO ATUALIZACION": "Portifolio", "PUNTOS ACTUALIZADOS": "INFO WOW_2025_Q4", "WI PT": "WI ME EXTRA PROCESSOS_PT_SVC", "WI ES": "WI ME EXTRA PROCESOS_ESP_SVC", "VERSION WI": "19", "FECHA CREACIÓN WI": "06/05/2022", "Link": "https://docs.google.com/document/d/1ul7x0i_ZebMZhmy2LDE5yKSyGXdyre0UQ7o8RuR2kH4/edit?tab=t.0"}, {"MILLA": "LAST MILE", "TRIBU": "Crowd", "MASTER TRIBU": "Crowd", "TEMA": "ME Extra - Procesos Complementarios", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLB, MLM, MLC, MCO, MLA", "WI donde se encuentra el proceso/tema": "WI ENVIO EXTRA PROCESOS COMPLEMENTARIOS", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "11/11/2025", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "INFO WOW_2025_Q4", "WI PT": "WI EXTRA PROCESSOS COMPLEMENTARES_PT_SVC_V0", "WI ES": "WI ENVIO EXTRA PROCESOS COMPLEMENTARIOS_ESP_SVC_V0", "VERSION WI": "3", "FECHA CREACIÓN WI": "15/07/2022", "Link": "https://docs.google.com/document/d/1B7EWdrzIdA1dDBPLSPNQXRBK96ebhuEj0FjPB_dULGg/edit?tab=t.0"}, {"MILLA": "FIRST MILE, LAST MILE", "TRIBU": "MLP XP", "MASTER TRIBU": "Ecosystem", "TEMA": "Mantenimiento y Aging de Vehículos", "NATUREZA": "Complementar", "ABRANGÊNCIA": "", "WI donde se encuentra el proceso/tema": "", "STATUS WI": "Pendente", "ULTIMA ATUALIZACIÓN WI": "", "TIPO ATUALIZACION": "", "PUNTOS ACTUALIZADOS": "", "WI PT": "", "WI ES": "", "VERSION WI": "", "FECHA CREACIÓN WI": "", "Link": ""}, {"MILLA": "LAST MILE", "TRIBU": "MLP XP", "MASTER TRIBU": "Ecosystem", "TEMA": "Pagos de Regulares y Complementarios Last Mile", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLB", "WI donde se encuentra el proceso/tema": "WI_Flujo de Pagos de Regulares y Complementarios Last Mile", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "10/04/2023", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WI Pagamentos das Regulares e Complementares_LM_PT", "WI ES": "WI Pagamentos das Regulares e Complementares_LM_ES", "VERSION WI": "1", "FECHA CREACIÓN WI": "21/12/2023", "Link": "https://docs.google.com/document/d/1JTsz4tJ2zPbK7r-_ZSYCaaLMMhrHl0cHc5_tXFotUNw/edit?tab=t.0"}, {"MILLA": "LAST MILE", "TRIBU": "Routing", "MASTER TRIBU": "FM&LM", "TEMA": "PRÉ ROUTING LM", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLB", "WI donde se encuentra el proceso/tema": "WIL_OTR_LAST MILE_PRÉ ROUTING", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "10/06/2025", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WIL_OTR_LAST MILE_PRÉ ROUTING_MLB_PT", "WI ES": "WIL_OTR_LAST MILE_PRÉ ROUTING_MLB_ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "10/06/2025", "Link": "https://docs.google.com/document/d/1ABbgR4G6e52sfpzikM_Wb4LtNhA3mqP1-jDwF_s10O8/edit?tab=t.0"}, {"MILLA": "LAST MILE", "TRIBU": "MLP XP", "MASTER TRIBU": "Ecosystem", "TEMA": "Gestión de Viaje para MLP", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI_Gestion de Viaje para MLP", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "12/09/2023", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WI_Gestão de Viagem para MLP_PT_V0", "WI ES": "WI_Gestion de Viaje para MLP_ES_V0", "VERSION WI": "0", "FECHA CREACIÓN WI": "12/09/2023", "Link": "https://docs.google.com/document/d/1J1AAqsU4U38IOTtnLsikvFCVZcl6H-JTGSr_720PqsI/edit?tab=t.0"}, {"MILLA": "LAST MILE", "TRIBU": "Scheduling", "MASTER TRIBU": "FM&LM", "TEMA": "Gestión de Super Dedicados", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLB", "WI donde se encuentra el proceso/tema": "WIL_Gestão De Super Dedicados", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "01/04/2025", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WIL_Gestão De Super Dedicados_PT_V0", "WI ES": "WIL_Gestão De Super Dedicados_ES_V0", "VERSION WI": "0", "FECHA CREACIÓN WI": "01/04/2025", "Link": "https://docs.google.com/document/d/1Icvmv2bDgz4Ki2Ut_du_k3HuflJn6MylxUQY0vQF2NI/edit?tab=t.0"}, {"MILLA": "LAST MILE", "TRIBU": "MLP XP", "MASTER TRIBU": "Ecosystem", "TEMA": "Proceso de Cobro de la Guep", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLB", "WI donde se encuentra el proceso/tema": "WIL_Processo de Cobrança da GUEP", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "11/03/2023", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "Processo de Cobrança da GUEP_PT", "WI ES": "Processo de Cobrança da GUEP_ES", "VERSION WI": "1", "FECHA CREACIÓN WI": "14/12/2022", "Link": "https://docs.google.com/document/d/1YqhkiArizY8zRrCLlnNx0gtNH1jcxEt31dGi_1NuN8o/edit?tab=t.0#heading=h.kkove7kste0"}, {"MILLA": "LAST MILE", "TRIBU": "MLP XP", "MASTER TRIBU": "Ecosystem", "TEMA": "PROCESOS DE CX ONE", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLB", "WI donde se encuentra el proceso/tema": "WI LAST MILE - PROCESOS DE CX ONE", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "11/10/2022", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WI LAST MILE - PROCESSOS DE CX ONE - PT", "WI ES": "WI LAST MILE - PROCESOS DE CX ONE -  ESP", "VERSION WI": "0", "FECHA CREACIÓN WI": "11/10/2022", "Link": "https://docs.google.com/document/d/1Qkdp7wKR80ji2AO-r-ZMFIsKcJW08AMAsaNdC2zwXvM/edit?tab=t.0"}, {"MILLA": "LAST MILE", "TRIBU": "FM + LM", "MASTER TRIBU": "FM&LM", "TEMA": "Definición de Ciclos", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI Definición de ciclos LM", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "30/12/2024", "TIPO ATUALIZACION": "Portifolio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WI Definição de ciclos LM PT", "WI ES": "WI Definición de ciclos LM ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "30/12/2024", "Link": "https://docs.google.com/document/d/1ZBaYgR-oezfMNmXuohOivlPkWGNrRNYQyKQ7qJEHM64/edit?tab=t.0"}, {"MILLA": "LAST MILE", "TRIBU": "FM + LM", "MASTER TRIBU": "FM&LM", "TEMA": "Gestión Detenciones Drivers Envíos Extra", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLM", "WI donde se encuentra el proceso/tema": "WIL_Gestión Detenciones Drivers Envíos Extra", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "05/03/2025", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WIL_Gestión Detenciones Drivers Envíos Extra_PT_V0", "WI ES": "WIL_Gestión Detenciones Drivers Envíos Extra_ES_V0", "VERSION WI": "0", "FECHA CREACIÓN WI": "05/03/2025", "Link": "https://docs.google.com/document/d/1v-MPflsqD4fEdZBmod6LEoJm3PlUKyceBtXKNXut_qs/edit?tab=t.0"}, {"MILLA": "LAST MILE", "TRIBU": "MLP XP", "MASTER TRIBU": "Ecosystem", "TEMA": "NEx rotas multiníveis", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLB, MLM, MLC, MCO, MLA", "WI donde se encuentra el proceso/tema": "WI NEx_rotas multiníveis", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "09/12/2025", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "INFO WOW_2025_Q4", "WI PT": "WI NEx_rotas multiníveis_PT", "WI ES": "WI NEx_rotas multiníveis_ES", "VERSION WI": "9", "FECHA CREACIÓN WI": "18/09/2023", "Link": "https://docs.google.com/document/d/1_OVcFM6DeUFtEULCkYfKkk7ztB-DRGuP8VHzIlRI-yk/edit?tab=t.0"}, {"MILLA": "LAST MILE", "TRIBU": "MLP XP", "MASTER TRIBU": "Ecosystem", "TEMA": "Tratativas PNR", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI_Tratativas PNR", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "02/05/2023", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WI_Tratativas PNR_PT", "WI ES": "WI_Tratativas PNR_ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "02/05/2023", "Link": "https://docs.google.com/document/d/1DQHYQU30a5agrJw9Usn5l5e4fdI0EvyYpdaA0ZTKCKQ/edit?tab=t.0"}, {"MILLA": "LAST MILE", "TRIBU": "MLP XP", "MASTER TRIBU": "Ecosystem", "TEMA": "Solicitud de Bloqueo Drivers", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI_TRANSPORTATION_OTR_SOLICITUD DE BLOQUEO DRIVERS", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "09/12/2025", "TIPO ATUALIZACION": "Workshop", "PUNTOS ACTUALIZADOS": "INFO WOW_2025_Q4", "WI PT": "WI_TRANSPORTATION_OTR_SOLICITAÇÃO DE BLOQUEIO DRIVERS_LATAM_PT", "WI ES": "WI_TRANSPORTATION_OTR_SOLICITUD DE BLOQUEO DRIVERS_LATAM_ES", "VERSION WI": "1", "FECHA CREACIÓN WI": "30/09/2025", "Link": "https://docs.google.com/document/d/1iIJQ9IEF6BSiLHfHkvWJG1D-0sxBtuhPJStqaV7NjUM/edit?tab=t.0"}, {"MILLA": "FIRST MILE", "TRIBU": "TOC & Monitoring", "MASTER TRIBU": "FM&LM", "TEMA": "Monitoreo FM Full Kangu", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLB", "WI donde se encuentra el proceso/tema": "WIL_Monitoreo FM FBM Kangu_FM", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "22/07/2025", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "INFO WOW_2025_Q3", "WI PT": "WIL_Monitoramento FM FBM Kangu_FM_PT_V0", "WI ES": "WIL_Monitoreo FM FBM Kangu_FM_ES_V0", "VERSION WI": "1", "FECHA CREACIÓN WI": "23/07/2024", "Link": "https://docs.google.com/document/d/1_kWFX_cYZxYEnbAncF7shjmvVYCtJK85mjBMZY671mI/edit?tab=t.0"}, {"MILLA": "LAST MILE", "TRIBU": "Crowd", "MASTER TRIBU": "Crowd", "TEMA": "Drivers Newbies Extra", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLB", "WI donde se encuentra el proceso/tema": "WI Drivers Newbies Extra", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "15/10/2024", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WI Drivers Newbies Extra (Operacionais) PT", "WI ES": "WI Drivers Newbies Extra (Operacional) ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "15/10/2024", "Link": "https://docs.google.com/document/d/1ntvKvRT5BciyHZMhITWae1UlZOnpiaA_lj3Fg9PyQzs/edit?tab=t.0"}, {"MILLA": "LAST MILE", "TRIBU": "Routing", "MASTER TRIBU": "FM&LM", "TEMA": "Routing LM", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLB", "WI donde se encuentra el proceso/tema": "WIL_OTR_LAST MILE_ROUTING_MLB", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "09/06/2025", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WIL_OTR_LAST MILE_ROUTING_MLB_PT", "WI ES": "WIL_OTR_LAST MILE_ROUTING_MLB_ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "09/06/2025", "Link": "https://docs.google.com/document/d/18jFVJyUeyM4PxSV_h6ZsfJtE-CgOH6VJYaDl5f9SDAI/edit?tab=t.0"}, {"MILLA": "LAST MILE", "TRIBU": "FM + LM", "MASTER TRIBU": "FM&LM", "TEMA": "Pagos Complementarios", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLM", "WI donde se encuentra el proceso/tema": "WI Pagos Complementarios", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "15/04/2025", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WI Pagamento Complementar MLM PT", "WI ES": "WI Pagos Complementarios MLM ES", "VERSION WI": "1", "FECHA CREACIÓN WI": "29/10/2024", "Link": "https://docs.google.com/document/d/1Aeb9BFfS6aCqyMlqCcgwqhp2zu7T4XOg3aWRerZwtTs/edit?tab=t.0"}, {"MILLA": "LAST MILE", "TRIBU": "FM + LM", "MASTER TRIBU": "FM&LM", "TEMA": "Procesos de Solicitud de Vehículo Ambulancia", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI LAST MILE - Procesos de Solicitud de Vehículo Ambulancia", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "14/10/2025", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "INFO WOW_2025_Q3", "WI PT": "WI LAST MILE - Processos de Solicitação de Veículo Ambulância_PT", "WI ES": "WI LAST MILE - Procesos de Solicitud de Vehículo Ambulancia_ES", "VERSION WI": "5", "FECHA CREACIÓN WI": "02/10/2023", "Link": "https://docs.google.com/document/d/1LeyHCwv1WkuW0MFfBdf8Q4NiH4hdilSmnJys5azDGYw/edit?tab=t.0"}, {"MILLA": "LAST MILE", "TRIBU": "FM + LM", "MASTER TRIBU": "FM&LM", "TEMA": "Entrega de Línea Blanca y Colchones", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI Entrega de Línea Blanca y Colchones LM", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "28/10/2025", "TIPO ATUALIZACION": "Workshop", "PUNTOS ACTUALIZADOS": "INFO WOW_2025_Q3", "WI PT": "WI Entrega de linha branca e colchões  LM PT", "WI ES": "WI Entrega de Línea Blanca y Colchones LM ES", "VERSION WI": "1", "FECHA CREACIÓN WI": "19/08/2025", "Link": "https://docs.google.com/document/d/1MkymIOMwbDdJ4omeWuaPoYLMoYMfeITCM5S1h7BQeP0/edit?tab=t.0"}, {"MILLA": "LINEHAUL", "TRIBU": "LH Execution", "MASTER TRIBU": "Linehaul", "TEMA": "Drop & Hook", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLM, MLB", "WI donde se encuentra el proceso/tema": "WI - Drop & Hook", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "28/10/2025", "TIPO ATUALIZACION": "Portifolio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WI - Drop & Hook_PT", "WI ES": "WI - Drop & Hook_ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "28/10/2025", "Link": "https://docs.google.com/document/d/1Kr8TVbrMZL6SJCk0_XFX8lzSYkhjHWSwwoPdy_QXvGo/edit?tab=t.0"}, {"MILLA": "LINEHAUL", "TRIBU": "LH Transversal", "MASTER TRIBU": "Linehaul", "TEMA": "Gestión de prefactura - Billing", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI - Gestión de prefactura - Billing", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "20/02/2022", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WI - Gestión de prefactura - Billing - PT", "WI ES": "WI - Gestión de prefactura - Billing  - ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "20/02/2022", "Link": "https://docs.google.com/document/d/1fGTGH6gmoZd6vsi2ICEOdgp6eawx9V9ZsHIzGVZjmjQ/edit?tab=t.0"}, {"MILLA": "LINEHAUL", "TRIBU": "LH Execution", "MASTER TRIBU": "Linehaul", "TEMA": "Monitoring LH", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI_Line Haul_Monitoring", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "25/04/2023", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WI_Line Haul_Monitoring_PT", "WI ES": "WI_Line Haul_Monitoring_ES", "VERSION WI": "1", "FECHA CREACIÓN WI": "27/06/2022", "Link": "https://docs.google.com/document/d/1gcDIQlCJg7enmpD4OVQ2GaPW40PjOa9cWRT9IR5FfcA/edit?tab=t.0"}, {"MILLA": "LINEHAUL", "TRIBU": "LH Execution", "MASTER TRIBU": "Linehaul", "TEMA": "Farol de Origen", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI Farol de Origen", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "03/07/2023", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WI Farol de Origem PT", "WI ES": "WI Farol de Origen ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "03/07/2023", "Link": "https://docs.google.com/document/d/1b83uJtY7FJePWOJOjIDsKEjDdhx18u8lzpkm4cyjlGI/edit?tab=t.0"}, {"MILLA": "LINEHAUL", "TRIBU": "LH Planning", "MASTER TRIBU": "Linehaul", "TEMA": "Edición de Viaje", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI_Edción de Viaje", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "02/10/2023", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WI_Edição de Viagem_PT_V0", "WI ES": "WI_Edción de Viaje_ES_V0", "VERSION WI": "0", "FECHA CREACIÓN WI": "02/10/2023", "Link": "https://docs.google.com/document/d/1cwmFpKKkkWCSZTazcPjl6tbXtfsZb3NTYJzruciYzAs/edit?tab=t.0#heading=h.hkj67vm94hdt"}, {"MILLA": "LINEHAUL", "TRIBU": "LH Planning", "MASTER TRIBU": "Linehaul", "TEMA": "Vehicle Planning", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI Line Haul - Vehicle Planning", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "10/09/2024", "TIPO ATUALIZACION": "Portifolio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WI Line Haul - Vehicle Planning_PT", "WI ES": "WI Line Haul - Vehicle Planning_ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "10/09/2024", "Link": "https://docs.google.com/document/d/1MOxKaNL5um-obe_RkUzyhEnAdtHNx1uO6QD1x8Ymr6g/edit?tab=t.0#heading=h.j4j5tq49j7h9"}, {"MILLA": "LINEHAUL", "TRIBU": "LH Execution", "MASTER TRIBU": "Linehaul", "TEMA": "FARO DEL DESTINO de LH", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI FAROL DE DESTINO de LH", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "30/09/2024", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "INFOWOW_2024_Q3|Q4", "WI PT": "WI Farol de Destino de LH PT", "WI ES": "WI FAROL DE DESTINO de LH ES", "VERSION WI": "1", "FECHA CREACIÓN WI": "15/05/2023", "Link": "https://docs.google.com/document/d/1uJoJbJdKo3l2X5JYPffxRfQ0GDuBXJ5bxnh34zbW4QA/edit?tab=t.0"}, {"MILLA": "LINEHAUL", "TRIBU": "LH Planning/ Execution", "MASTER TRIBU": "Linehaul", "TEMA": "Apertura de canalizaciones a Granel", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI_Mapeo de apertura de canalizaciones a Granel", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "15/10/2024", "TIPO ATUALIZACION": "Portifolio", "PUNTOS ACTUALIZADOS": "INFOWOW_2024_Q3|Q4", "WI PT": "WI_Mapeamento de abertura de canalização à Granel_PT", "WI ES": "WI_Mapeo de apertura de canalizaciones a Granel_ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "15/10/2024", "Link": "https://docs.google.com/document/d/1DCwTPjbWVWxIcB9iW2hxGzx5WFLjCBvG5caHnBUxx-4/edit?tab=t.0"}, {"MILLA": "LINEHAUL", "TRIBU": "LH Planning", "MASTER TRIBU": "Linehaul", "TEMA": "Monitoreo de aceptación de Rutas", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI_Line Haul_Ejecución (Field)_Monitoreo de aceptación de Rutas", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "03/03/2025", "TIPO ATUALIZACION": "Workshop", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WI_Line Haul_Execução (Field)_Monitorar a aceitação das rotas_PT", "WI ES": "WI_Line Haul_Ejecución (Field)_Monitoreo de aceptación de Rutas_ES", "VERSION WI": "1", "FECHA CREACIÓN WI": "21/01/2025", "Link": "https://docs.google.com/document/d/1a9NUnfyNMF_V3TGjeLKQyxcxlD9WorHB07-chOXdsts/edit?tab=t.0"}, {"MILLA": "LINEHAUL", "TRIBU": "LH Execution", "MASTER TRIBU": "Linehaul", "TEMA": "Cumplimiento del ETA en el origen y en el destino", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI_Line Haul_Ejecución (Field)_Monitorear las entregas garantizando el cumplimiento del ETA en el origen y en el destino.", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "03/03/2025", "TIPO ATUALIZACION": "Workshop", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WI_Line Haul_Execução (Field)_ Monitorar as entregas e o cumprimento do ETA_PT", "WI ES": "WI_Line Haul_Ejecución (Field)_Monitorear las entregas garantizando el cumplimiento del ETA en el origen y en el destino", "VERSION WI": "1", "FECHA CREACIÓN WI": "21/01/2025", "Link": "https://docs.google.com/document/d/1TdkJtVxwmJ-lcrVluS5UEc2lsmSFsLxMm6ncs-eSeu4/edit?tab=t.0"}, {"MILLA": "LINEHAUL", "TRIBU": "LH Execution", "MASTER TRIBU": "Linehaul", "TEMA": "Actividades de Despacho y corrección Diaria", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI_Line Haul_Ejecución (Field)_Actividades de Despacho y corrección Diaria", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "03/03/2025", "TIPO ATUALIZACION": "Workshop", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WI_Line Haul_Execução (Field)_Actividades de despacho e correção diaria_PT", "WI ES": "WI_Line Haul_Ejecución (Field)_Actividades de Despacho y corrección Diaria_ES", "VERSION WI": "1", "FECHA CREACIÓN WI": "21/01/2025", "Link": "https://docs.google.com/document/d/1vunBm2qmfP5ZRMJjkJxqj3OIGK0PMMexZpTYxM91XKE/edit?tab=t.0"}, {"MILLA": "LINEHAUL", "TRIBU": "LH Planning", "MASTER TRIBU": "Linehaul", "TEMA": "Actividades Scheduling", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI_Line Haul_Ejecución (Field)_Actividades Scheduling", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "03/03/2025", "TIPO ATUALIZACION": "Workshop", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WI_Line Haul_Execução (Field)_Actividades Scheduling_PT", "WI ES": "WI_Line Haul_Ejecución (Field)_Actividades Scheduling_ES", "VERSION WI": "1", "FECHA CREACIÓN WI": "21/01/2025", "Link": "https://docs.google.com/document/d/1TpGultM7oSEcoLhABxyi0LvBFOdjWCyvJH6f63CljiU/edit?tab=t.0"}, {"MILLA": "LINEHAUL", "TRIBU": "LH Execution", "MASTER TRIBU": "Linehaul", "TEMA": "Indicadores y Seguimiento de Metricas", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI_Line Haul_Ejecución (Field)_Indicadores y Seguimiento de Metricas", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "03/03/2025", "TIPO ATUALIZACION": "Workshop", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WI_Line Haul_Execução (Field)_Indicadores e Seguimiento de Metricas_PT", "WI ES": "WI_Line Haul_Ejecución (Field)_Indicadores y Seguimiento de Metricas_ES", "VERSION WI": "1", "FECHA CREACIÓN WI": "21/01/2025", "Link": "https://docs.google.com/document/d/1Z-81Foq-zXsL4J8ViK9yBtXH78fzQ5Jf-D7NP9jJWPE/edit?tab=t.0"}, {"MILLA": "LINEHAUL", "TRIBU": "LH Planning", "MASTER TRIBU": "Linehaul", "TEMA": "Preparación Semanal de viajes", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI_Line Haul_Planning_Preparación Semanal de viajes", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "31/03/2026", "TIPO ATUALIZACION": "Workshop", "PUNTOS ACTUALIZADOS": "INFOWOW_2026_Q1 y Q2", "WI PT": "WI_Line Haul_Planning_Preparação semanal para viagens_PT_V1", "WI ES": "WI_Line Haul_Planning_Preparación Semanal de viajes_ES_V1", "VERSION WI": "1", "FECHA CREACIÓN WI": "4/12/2024", "Link": "https://docs.google.com/document/d/14V4Xaz84WLQ3m97Cbylx5FdTZKD7CcK2CkgyOcFSH9g/edit?tab=t.0"}, {"MILLA": "LINEHAUL", "TRIBU": "LH Planning", "MASTER TRIBU": "Linehaul", "TEMA": "Planning LH", "NATUREZA": "Core", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI_Line Haul_Planning_Forecast", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "03/03/2025", "TIPO ATUALIZACION": "Workshop", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WI_Line Haul_Planning_Forecast_PT", "WI ES": "WI_Line Haul_Planning_Forecast _ES", "VERSION WI": "1", "FECHA CREACIÓN WI": "21/11/2024", "Link": "https://docs.google.com/document/d/1TW_qs38pjqWKP2W95-mRS4Xh4e_YqdSiZCDf9qYfWro/edit?pli=1&tab=t.0"}, {"MILLA": "LINEHAUL", "TRIBU": "LH Planning", "MASTER TRIBU": "Linehaul", "TEMA": "Planning Multiwarehouse", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLB", "WI donde se encuentra el proceso/tema": "WIL_Linehaul_Processo de Programação MWH", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "08/07/2025", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WIL_Linehaul_Processo de Programação MWH_PT", "WI ES": "WIL_Linehaul_Processo de Programação MWH_ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "08/07/2025", "Link": "https://docs.google.com/document/d/1DJnV7tnxnCGn_iwFLiTDyeZnP2eiPqIEJ5kYzfVbeU8/edit?tab=t.0"}, {"MILLA": "LINEHAUL", "TRIBU": "LH Planning", "MASTER TRIBU": "Linehaul", "TEMA": "Frota Dedicada LH", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLB, MLM", "WI donde se encuentra el proceso/tema": "WI_Frota Dedicada LH", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "30/09/2025", "TIPO ATUALIZACION": "Workshop", "PUNTOS ACTUALIZADOS": "INFO WOW_2025_Q3", "WI PT": "WI_Frota Dedicada LH_PT_V0", "WI ES": "WI_Frota Dedicada LH_ES_V0", "VERSION WI": "0", "FECHA CREACIÓN WI": "30/09/2025", "Link": "https://docs.google.com/document/d/1u81OtGa_NcTigXVVWIjnifLbEkLdlBg7VUlCM0IPCeM/edit?tab=t.0"}, {"MILLA": "LINEHAUL", "TRIBU": "LH Execution", "MASTER TRIBU": "Linehaul", "TEMA": "Reversas LineHaul", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLB", "WI donde se encuentra el proceso/tema": "WIL Célula de Reversas LineHaul", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "28/10/2025", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WIL Célula de Reversas LineHaul_PT", "WI ES": "WIL Célula de Reversas LineHaul ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "28/10/2025", "Link": "https://docs.google.com/document/d/1pjEShleOr0f9FpLnlxR7uDj9JzvdR_pqGiOXRBjPPMw/edit?tab=t.0"}, {"MILLA": "LINEHAUL", "TRIBU": "LH Execution", "MASTER TRIBU": "Linehaul", "TEMA": "Programação de Reversas LineHaul", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLB", "WI donde se encuentra el proceso/tema": "WIL Programação de Reversas LineHaul", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "28/10/2025", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WIL Programação de Reversas LineHaul_MLB_PT", "WI ES": "WIL Programação de Reversas LineHaul_MLB_ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "28/10/2025", "Link": "https://docs.google.com/document/d/1-RKFBsB4Va4TdJjPKIzwo7lcWQ2m_wTRx4WxPzFM_7Q/edit?tab=t.0#heading=h.tyjcwt"}, {"MILLA": "LINEHAUL", "TRIBU": "LH Planning", "MASTER TRIBU": "Linehaul", "TEMA": "Scheduling y Validacion D0", "NATUREZA": "Core", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI_Line Haul_Ejecución (Field)_Análisis de Scheduling y Validación D0", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "11/11/2025", "TIPO ATUALIZACION": "Workshop", "PUNTOS ACTUALIZADOS": "INFO WOW_2025_Q4", "WI PT": "WI_Line Haul_Execução (Field)_Upload e programação D0 PT", "WI ES": "WI_Line Haul_Ejecución (Field)_Análisis de Scheduling y Validación D0 ES", "VERSION WI": "4", "FECHA CREACIÓN WI": "21/01/2025", "Link": "https://docs.google.com/document/d/1bb5SMqYVcn42BRTGmt_-eFpVvO80lSC4yP3WTW6EueM/edit?tab=t.0"}, {"MILLA": "LINEHAUL", "TRIBU": "LH Planning", "MASTER TRIBU": "Linehaul", "TEMA": "Re-planning diário", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI_Line Haul_Ejecución (Field)_Re-planning diário", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "09/12/2025", "TIPO ATUALIZACION": "Workshop", "PUNTOS ACTUALIZADOS": "INFO WOW_2025_Q4", "WI PT": "WI_Line Haul_Execução (Field)_ Replanning diario_PT", "WI ES": "WI_Line Haul_Ejecución (Field)_Re-planning diário_ES", "VERSION WI": "3", "FECHA CREACIÓN WI": "21/01/2025", "Link": "https://docs.google.com/document/d/1z55aU-mIjx_2sYQr4ALueMjftN29RLFE3JPWqn9QFWM/edit?tab=t.0"}, {"MILLA": "LINEHAUL", "TRIBU": "LH Execution", "MASTER TRIBU": "Linehaul", "TEMA": "Recepción y Descarga de Material Flow Vehiculos Sider", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLB", "WI donde se encuentra el proceso/tema": "WIL_Criterios de Recepción y Descarga de Material Flow Vehiculos Sider", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "09/12/2025", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "INFO WOW_2025_Q4", "WI PT": "WIL_Critérios de Recebimento e Descarga de Veículos Síder - Material Flow_MLB_PT", "WI ES": "WIL_Criterios de Recepción y Descarga de Material Flow Vehiculos Sider_MLB_ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "09/12/2025", "Link": "https://docs.google.com/document/d/1ZiN9UabfT2dx09NJZlP8EFCCmxNh_KAetf5uGNk0IN8/edit?tab=t.0"}, {"MILLA": "LINEHAUL", "TRIBU": "LH Transversal", "MASTER TRIBU": "Linehaul", "TEMA": "Candado Scheduling/Regularización de tarifas", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI_OTR_LINE HAUL_SCHEDULING", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "03/03/2025", "TIPO ATUALIZACION": "Portifolio", "PUNTOS ACTUALIZADOS": "INFOWOW_2026_Q1 y Q2", "WI PT": "WI_OTR_LINE HAUL_SCHEDULING_LATAM_PT", "WI ES": "WI_OTR_LINE HAUL_SCHEDULING_LATAM_ES", "VERSION WI": "3", "FECHA CREACIÓN WI": "28/02/2025", "Link": "https://docs.google.com/document/d/1oUHGEr7J96tqvbLViooxtfGU7aj19dO7QFTq8Z4fmws/edit?tab=t.0"}, {"MILLA": "LAST MILE", "TRIBU": "MLP XP", "MASTER TRIBU": "Ecosystem", "TEMA": "Gestión de drivers riesgosos", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLM", "WI donde se encuentra el proceso/tema": "WI_Gestión de drivers riesgosos", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "02/10/2023", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WI_Management drivers riesgosos_PT_V0- MLM", "WI ES": "WI_Gestión de drivers riesgosos_ES_V0- MLM", "VERSION WI": "0", "FECHA CREACIÓN WI": "02/10/2023", "Link": "https://docs.google.com/document/d/1des4JX3H8oAn_DHMMr98rq7j0mwtCRg_8_p_yPI8b-8/edit?pli=1&tab=t.0#heading=h.8swic0thihew"}, {"MILLA": "LAST MILE", "TRIBU": "MLP XP", "MASTER TRIBU": "Ecosystem", "TEMA": "Flujo de Siniestros LM", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLB", "WI donde se encuentra el proceso/tema": "WI LAST MILE - PROCESSOS DE SINISTROS", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "02/04/2024", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "-", "WI PT": "WI LAST MILE - PROCESSOS DE SINISTROS_PT", "WI ES": "WI LAST MILE - PROCESSOS DE SINISTROS_ES", "VERSION WI": "3", "FECHA CREACIÓN WI": "30/09/2022", "Link": "https://docs.google.com/document/d/1s2h4nP_kNE9fhCbcMqR-jDRFE3purHXvGeYH-2lFQSo/edit?tab=t.0#heading=h.1fob9te"}, {"MILLA": "FIRST MILE, LAST MILE", "TRIBU": "MLP XP", "MASTER TRIBU": "Ecosystem", "TEMA": "Carrier Management", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI - Carrier Management", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "11/11/2025", "TIPO ATUALIZACION": "Portifolio", "PUNTOS ACTUALIZADOS": "INFO WOW_2025_Q4", "WI PT": "WI - Carrier Management_PT", "WI ES": "WI - Carrier Management_ES", "VERSION WI": "11", "FECHA CREACIÓN WI": "02/10/2023", "Link": "https://docs.google.com/document/d/1CvvZXKU0rTmm6GMpNe7-IFjyaXc22lS1F9mROoj7qQc/edit?tab=t.0"}, {"MILLA": "LAST MILE", "TRIBU": "FM + LM", "MASTER TRIBU": "FM&LM", "TEMA": "Expedición SVC", "NATUREZA": "Core", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI LAST MILE - Expedición_SVC", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "06/01/2026", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "INFO WOW_2025_Q4", "WI PT": "WI LAST MILE - EXPEDIÇÃO DISPATCH PROCESS SETUP_SVC_PT", "WI ES": "WI LAST MILE - Expedición_SVC_ES", "VERSION WI": "7", "FECHA CREACIÓN WI": "18/04/2022", "Link": "https://docs.google.com/document/d/1fDpZVdGpU4bqLmuPQlaFu6NeGbGUUzat2WyNaK6Pznk/edit?tab=t.0"}, {"MILLA": "LINEHAUL", "TRIBU": "LH Transversal", "MASTER TRIBU": "Linehaul", "TEMA": "Scheduling LH", "NATUREZA": "Core", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI_OTR_LINE HAUL_SCHEDULING", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "09/12/2025", "TIPO ATUALIZACION": "Portifolio", "PUNTOS ACTUALIZADOS": "INFO WOW_2025_Q4", "WI PT": "WI_OTR_LINE HAUL_SCHEDULING_LATAM_PT", "WI ES": "WI_OTR_LINE HAUL_SCHEDULING_LATAM_ES", "VERSION WI": "3", "FECHA CREACIÓN WI": "28/02/2025", "Link": ""}, {"MILLA": "LINEHAUL", "TRIBU": "LH Transversal", "MASTER TRIBU": "Linehaul", "TEMA": "Gross Merchandise Value (GMV) LH", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MCO", "WI donde se encuentra el proceso/tema": "WIL_OTR_LINE HAUL_GROSS MERCHANDISE VALUE (GMV)", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "08/12/2025", "TIPO ATUALIZACION": "Workshop", "PUNTOS ACTUALIZADOS": "INFO WOW_2025_Q4", "WI PT": "WIL_OTR_LINE HAUL_GROSS MERCHANDISE VALUE (GMV)_MCO_PT", "WI ES": "WIL_OTR_LINE HAUL_GROSS MERCHANDISE VALUE (GMV)_MCO_ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "08/12/2030", "Link": "https://docs.google.com/document/d/1PeJ0uFK51GAeY-J9BgGT9IOIyd0FGEL6l0etQ5XC5Qk/edit?tab=t.0"}, {"MILLA": "LINEHAUL", "TRIBU": "LH Execution", "MASTER TRIBU": "Linehaul", "TEMA": "Monitoring Panel de Alertas", "NATUREZA": "", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "", "STATUS WI": "Pendente", "ULTIMA ATUALIZACIÓN WI": "", "TIPO ATUALIZACION": "", "PUNTOS ACTUALIZADOS": "", "WI PT": "", "WI ES": "", "VERSION WI": "", "FECHA CREACIÓN WI": "", "Link": ""}, {"MILLA": "LINEHAUL", "TRIBU": "LH Execution", "MASTER TRIBU": "Linehaul", "TEMA": "TT/OTA", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI Gestão e Critérios para Ajuste de TT LH", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "06/01/2026", "TIPO ATUALIZACION": "Workshop", "PUNTOS ACTUALIZADOS": "INFOWOW_2026_Q1 y Q2", "WI PT": "WI Gestão e Critérios para Ajuste de TT LH_PT", "WI ES": "WI Gestão e Critérios para Ajuste de TT LH_ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "05/01/2031", "Link": "https://docs.google.com/document/d/1QxkOHjttDXEQXsKZhGnr3PCPn0mLP8AiTN_mVPVKeQQ/edit?tab=t.0"}, {"MILLA": "LINEHAUL", "TRIBU": "LH Execution", "MASTER TRIBU": "Linehaul", "TEMA": "Load Type Selector", "NATUREZA": "Complementar", "ABRANGÊNCIA": "", "WI donde se encuentra el proceso/tema": "", "STATUS WI": "Pendente", "ULTIMA ATUALIZACIÓN WI": "", "TIPO ATUALIZACION": "", "PUNTOS ACTUALIZADOS": "", "WI PT": "", "WI ES": "", "VERSION WI": "", "FECHA CREACIÓN WI": "", "Link": ""}, {"MILLA": "LINEHAUL", "TRIBU": "LH Execution", "MASTER TRIBU": "Linehaul", "TEMA": "Load Factor", "NATUREZA": "Complementar", "ABRANGÊNCIA": "", "WI donde se encuentra el proceso/tema": "", "STATUS WI": "Pendente", "ULTIMA ATUALIZACIÓN WI": "", "TIPO ATUALIZACION": "", "PUNTOS ACTUALIZADOS": "", "WI PT": "", "WI ES": "", "VERSION WI": "", "FECHA CREACIÓN WI": "", "Link": ""}, {"MILLA": "LINEHAUL", "TRIBU": "LH Planning", "MASTER TRIBU": "Linehaul", "TEMA": "LineHaul - Gestion de Circuitos", "NATUREZA": "Core", "ABRANGÊNCIA": "", "WI donde se encuentra el proceso/tema": "", "STATUS WI": "Pendente", "ULTIMA ATUALIZACIÓN WI": "", "TIPO ATUALIZACION": "", "PUNTOS ACTUALIZADOS": "", "WI PT": "", "WI ES": "", "VERSION WI": "", "FECHA CREACIÓN WI": "", "Link": ""}, {"MILLA": "LINEHAUL", "TRIBU": "LH Planning", "MASTER TRIBU": "Linehaul", "TEMA": "Input Asistants", "NATUREZA": "Complementar", "ABRANGÊNCIA": "", "WI donde se encuentra el proceso/tema": "", "STATUS WI": "Pendente", "ULTIMA ATUALIZACIÓN WI": "", "TIPO ATUALIZACION": "", "PUNTOS ACTUALIZADOS": "", "WI PT": "", "WI ES": "", "VERSION WI": "", "FECHA CREACIÓN WI": "", "Link": ""}, {"MILLA": "LINEHAUL", "TRIBU": "LH Transversal", "MASTER TRIBU": "Linehaul", "TEMA": "Fleet Management /creación vehículos y creación drivers", "NATUREZA": "Complementar", "ABRANGÊNCIA": "", "WI donde se encuentra el proceso/tema": "", "STATUS WI": "Pendente", "ULTIMA ATUALIZACIÓN WI": "", "TIPO ATUALIZACION": "", "PUNTOS ACTUALIZADOS": "", "WI PT": "", "WI ES": "", "VERSION WI": "", "FECHA CREACIÓN WI": "", "Link": ""}, {"MILLA": "LINEHAUL", "TRIBU": "LH Transversal", "MASTER TRIBU": "Linehaul", "TEMA": "Rostering", "NATUREZA": "Core", "ABRANGÊNCIA": "", "WI donde se encuentra el proceso/tema": "", "STATUS WI": "Pendente", "ULTIMA ATUALIZACIÓN WI": "", "TIPO ATUALIZACION": "", "PUNTOS ACTUALIZADOS": "", "WI PT": "", "WI ES": "", "VERSION WI": "", "FECHA CREACIÓN WI": "", "Link": ""}, {"MILLA": "LINEHAUL", "TRIBU": "LH Transversal", "MASTER TRIBU": "Linehaul", "TEMA": "Modelo Reingenieria MelServices (creacion) / Cambio / Rates & Scheduling", "NATUREZA": "Complementar", "ABRANGÊNCIA": "", "WI donde se encuentra el proceso/tema": "", "STATUS WI": "Pendente", "ULTIMA ATUALIZACIÓN WI": "", "TIPO ATUALIZACION": "", "PUNTOS ACTUALIZADOS": "", "WI PT": "", "WI ES": "", "VERSION WI": "", "FECHA CREACIÓN WI": "", "Link": "https://docs.google.com/document/d/1vunBm2qmfP5ZRMJjkJxqj3OIGK0PMMexZpTYxM91XKE/edit?tab=t.0"}, {"MILLA": "FIRST MILE, LAST MILE", "TRIBU": "MLP XP", "MASTER TRIBU": "Ecosystem", "TEMA": "Role Helper", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI - Role Helper", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "30/09/2024", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "INFOWOW_2024_Q3|Q4", "WI PT": "WI - Role Helper_PT", "WI ES": "WI - Role Helper_ES", "VERSION WI": "1", "FECHA CREACIÓN WI": "30/09/2024", "Link": ""}, {"MILLA": "FIRST MILE, LAST MILE", "TRIBU": "DX", "MASTER TRIBU": "Ecosystem", "TEMA": "Helper y Asignación\nLM / FM", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI - CASOS DE USO DE HELPERS", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "31/03/2026", "TIPO ATUALIZACION": "Workshop", "PUNTOS ACTUALIZADOS": "", "WI PT": "WI_OTR_CASOS DE USO DE HELPERS_LATAM_PT", "WI ES": "WI_OTR_CASOS DE USO DE HELPERS_LATAM_ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "31/03/2026", "Link": "https://docs.google.com/document/d/1g2M_zYq-sGswprHGCADxH6YuTymfaB87QxZn1LEEuK8/edit?tab=t.0"}, {"MILLA": "FIRST MILE, LAST MILE", "TRIBU": "Fleet Mgmt", "MASTER TRIBU": "Ecosystem", "TEMA": "SRM", "NATUREZA": "Complementar", "ABRANGÊNCIA": "", "WI donde se encuentra el proceso/tema": "", "STATUS WI": "Pendente", "ULTIMA ATUALIZACIÓN WI": "", "TIPO ATUALIZACION": "", "PUNTOS ACTUALIZADOS": "", "WI PT": "", "WI ES": "", "VERSION WI": "", "FECHA CREACIÓN WI": "", "Link": ""}, {"MILLA": "FIRST MILE, LAST MILE", "TRIBU": "MLP XP", "MASTER TRIBU": "Ecosystem", "TEMA": "Roles Transporte", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI - Roles Transporte", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "30/09/2025", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "INFO WOW_2025_Q3", "WI PT": "WI - Roles Transporte_PT", "WI ES": "WI - Roles Transporte_ES", "VERSION WI": "8", "FECHA CREACIÓN WI": "04/12/2024", "Link": ""}, {"MILLA": "FIRST MILE, LAST MILE", "TRIBU": "MLP 2.0", "MASTER TRIBU": "Ecosystem", "TEMA": "MLP 2.0", "NATUREZA": "Complementar", "ABRANGÊNCIA": "", "WI donde se encuentra el proceso/tema": "", "STATUS WI": "Pendente", "ULTIMA ATUALIZACIÓN WI": "", "TIPO ATUALIZACION": "", "PUNTOS ACTUALIZADOS": "", "WI PT": "", "WI ES": "", "VERSION WI": "", "FECHA CREACIÓN WI": "", "Link": ""}, {"MILLA": "FIRST MILE", "TRIBU": "FM + LM", "MASTER TRIBU": "FM&LM", "TEMA": "PUP D-1 / D-7", "NATUREZA": "Complementar", "ABRANGÊNCIA": "", "WI donde se encuentra el proceso/tema": "", "STATUS WI": "Pendente", "ULTIMA ATUALIZACIÓN WI": "", "TIPO ATUALIZACION": "", "PUNTOS ACTUALIZADOS": "", "WI PT": "", "WI ES": "", "VERSION WI": "", "FECHA CREACIÓN WI": "", "Link": ""}, {"MILLA": "LAST MILE, FIRST MILE", "TRIBU": "MLP XP", "MASTER TRIBU": "Ecosystem", "TEMA": "Gestión de usuarios Externos en Silos MLP", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI - Carrier Management", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "06/01/2026", "TIPO ATUALIZACION": "Portifolio", "PUNTOS ACTUALIZADOS": "INFO WOW_2025_Q4", "WI PT": "WI - Carrier Management_PT", "WI ES": "WI - Carrier Management_ES", "VERSION WI": "12", "FECHA CREACIÓN WI": "02/10/2023", "Link": "https://docs.google.com/document/d/1des4JX3H8oAn_DHMMr98rq7j0mwtCRg_8_p_yPI8b-8/edit?pli=1&tab=t.0#heading=h.8swic0thihew"}, {"MILLA": "FIRST MILE", "TRIBU": "Seller Ops & XP", "MASTER TRIBU": "Ecosystem", "TEMA": "Gestión de sellers ofensores", "NATUREZA": "Complementar", "ABRANGÊNCIA": "Latam", "WI donde se encuentra el proceso/tema": "WI_FM_ADMINISTRATIVO_GESTIÓN DE SELLERS OFENSORES", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "03/03/2026", "TIPO ATUALIZACION": "Workshop", "PUNTOS ACTUALIZADOS": "INFOWOW_2026_Q1 y Q2", "WI PT": "WI_FM_ADMINISTRATIVO_GESTÃO DE SELLERS OFENSORES_LATAM_PT", "WI ES": "WI_FM_ADMINISTRATIVO_GESTIÓN DE SELLERS OFENSORES_LATAM_ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "03/03/2026", "Link": "https://docs.google.com/document/d/1FBh2fFN5q3gzkZwpmeyrGYPYx8cE7jAtZr4oKUWnON8/edit?tab=t.0#heading=h.1fob9te"}, {"MILLA": "FIRST MILE", "TRIBU": "Seller Ops & XP", "MASTER TRIBU": "Ecosystem", "TEMA": "Flujo WDM de sellers", "NATUREZA": "Complementar", "ABRANGÊNCIA": "", "WI donde se encuentra el proceso/tema": "", "STATUS WI": "Pendente", "ULTIMA ATUALIZACIÓN WI": "", "TIPO ATUALIZACION": "", "PUNTOS ACTUALIZADOS": "", "WI PT": "", "WI ES": "", "VERSION WI": "", "FECHA CREACIÓN WI": "", "Link": ""}, {"MILLA": "FIRST MILE", "TRIBU": "Seller Ops & XP", "MASTER TRIBU": "Ecosystem", "TEMA": "Plan de Gestión de Peak season", "NATUREZA": "Complementar", "ABRANGÊNCIA": "", "WI donde se encuentra el proceso/tema": "", "STATUS WI": "Pendente", "ULTIMA ATUALIZACIÓN WI": "", "TIPO ATUALIZACION": "", "PUNTOS ACTUALIZADOS": "", "WI PT": "", "WI ES": "", "VERSION WI": "", "FECHA CREACIÓN WI": "", "Link": ""}, {"MILLA": "FIRST MILE", "TRIBU": "Seller Ops & XP", "MASTER TRIBU": "Ecosystem", "TEMA": "Flujo de migración", "NATUREZA": "Complementar", "ABRANGÊNCIA": "", "WI donde se encuentra el proceso/tema": "", "STATUS WI": "Pendente", "ULTIMA ATUALIZACIÓN WI": "", "TIPO ATUALIZACION": "", "PUNTOS ACTUALIZADOS": "", "WI PT": "", "WI ES": "", "VERSION WI": "", "FECHA CREACIÓN WI": "", "Link": ""}, {"MILLA": "FIRST MILE", "TRIBU": "Seller Ops & XP", "MASTER TRIBU": "Ecosystem", "TEMA": "Flujo de comunicación", "NATUREZA": "Complementar", "ABRANGÊNCIA": "", "WI donde se encuentra el proceso/tema": "", "STATUS WI": "Pendente", "ULTIMA ATUALIZACIÓN WI": "", "TIPO ATUALIZACION": "", "PUNTOS ACTUALIZADOS": "", "WI PT": "", "WI ES": "", "VERSION WI": "", "FECHA CREACIÓN WI": "", "Link": ""}, {"MILLA": "FIRST MILE", "TRIBU": "FM + LM", "MASTER TRIBU": "FM&LM", "TEMA": "One Bip Coleta em Sellers & Places", "NATUREZA": "Complementar", "ABRANGÊNCIA": "", "WI donde se encuentra el proceso/tema": "", "STATUS WI": "Pendente", "ULTIMA ATUALIZACIÓN WI": "", "TIPO ATUALIZACION": "", "PUNTOS ACTUALIZADOS": "", "WI PT": "", "WI ES": "", "VERSION WI": "", "FECHA CREACIÓN WI": "", "Link": ""}, {"MILLA": "LINEHAUL", "TRIBU": "LH Execution", "MASTER TRIBU": "Linehaul", "TEMA": "NCC - Post Mortem", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLB", "WI donde se encuentra el proceso/tema": "WIL Line Haul NCC: Key Accounts - Post Mortem", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "18/2/2026", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "INFOWOW_2026_Q1 y Q2", "WI PT": "WI Line Haul NCC: Key Accounts - Post Mortem PT", "WI ES": "WI Line Haul NCC: Key Accounts - Post Mortem ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "18/2/2026", "Link": "https://docs.google.com/document/d/17JCHAvA6cnVSifZLjEKYmhrkYyouOHjZoYrkF_E4uEc/edit?tab=t.0"}, {"MILLA": "LINEHAUL", "TRIBU": "LH Execution", "MASTER TRIBU": "Linehaul", "TEMA": "NCC - Pré Mortem", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLB", "WI donde se encuentra el proceso/tema": "WIL Line Haul NCC: Key Accounts - Pré Mortem", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "18/2/2026", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "INFOWOW_2026_Q1 y Q2", "WI PT": "WI Line Haul NCC: Key Accounts - Pré Mortem PT", "WI ES": "WI Line Haul NCC: Key Accounts - Pré Mortem ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "18/2/2026", "Link": "https://docs.google.com/document/d/1pUjaUVXQUX_2EO5-uJaWWxTirNikAEJCyrAp7hWcaf0/edit?tab=t.0"}, {"MILLA": "LINEHAUL", "TRIBU": "LH Execution", "MASTER TRIBU": "Linehaul", "TEMA": "NCC - Qualidade", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLB", "WI donde se encuentra el proceso/tema": "WIL Line Haul NCC: Qualidade - ES", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "18/2/2026", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "INFOWOW_2026_Q1 y Q2", "WI PT": "WIL Line Haul NCC: Qualidade - PT", "WI ES": "WIL Line Haul NCC: Qualidade - ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "18/2/2026", "Link": "https://docs.google.com/document/d/1task6KXpaw5vv0RFSrRYnjhtRwEw0zEFjnOM9Vy8AnQ/edit?tab=t.0"}, {"MILLA": "LINEHAUL", "TRIBU": "LH Execution", "MASTER TRIBU": "Linehaul", "TEMA": "NCC - Analisis Post Mortem Regionales", "NATUREZA": "Complementar", "ABRANGÊNCIA": "MLB", "WI donde se encuentra el proceso/tema": "WIL Line Haul NCC: Regionales - Análisis Post Mortem ES", "STATUS WI": "Vigente", "ULTIMA ATUALIZACIÓN WI": "18/2/2026", "TIPO ATUALIZACION": "Flujo Cambio", "PUNTOS ACTUALIZADOS": "INFOWOW_2026_Q1 y Q2", "WI PT": "WIL Line Haul NCC: Regionais - Análise Post Mortem PT", "WI ES": "WIL Line Haul NCC: Regionales - Análisis Post Mortem ES", "VERSION WI": "0", "FECHA CREACIÓN WI": "18/2/2026", "Link": "https://docs.google.com/document/d/12gltLYc9wOwJUPvn_aXA80uHQwqXdV5SXOIqu8JIUuE/edit?tab=t.0"}];
+
+/* ════ HELPERS ════ */
+function pcsv(t){return Papa.parse(t.trim(),{header:true,skipEmptyLines:true}).data;}
+function stClass(s){
+  const v=(s||'').toLowerCase();
+  if(v.includes('finalizado')||v.includes('done'))return'finalizado';
+  if(v.includes('on going')||v.includes('ongoing'))return'ongoing';
+  if(v.includes('cancelado'))return'cancelado';
+  if(v.includes('vigente'))return'vigente';
+  if(v.includes('pendente')||v.includes('pendiente'))return'pendente';
+  if(v.includes('comunicado'))return'comunicado';
+  return'programado';
+}
+function badge(s){
+  const c=stClass(s);
+  const L={finalizado:'Finalizado',ongoing:'On Going',cancelado:'Cancelado',programado:s||'Programado',vigente:'Vigente',pendente:'Pendente',comunicado:'✓ Comunicado'};
+  return`<span class="bge ${c}">${L[c]||s}</span>`;
+}
+function prog(str){
+  const n=parseInt((str||'0').replace('%',''))||0;
+  const cl=n===100?'':n>=50?'a':'r';
+  return`<div class="pgw"><div class="pgbar"><div class="pgfill ${cl}" style="width:${n}%"></div></div><span class="pgpct">${n}%</span></div>`;
+}
+function h2r(h){const r=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(h);return r?`${parseInt(r[1],16)},${parseInt(r[2],16)},${parseInt(r[3],16)}`:'128,128,128';}
+
+/* ════ INIT ════ */
+function init(){
+  DB.p=pcsv(CSV_P); DB.c=pcsv(CSV_C); DB.pr=PROC_DATA;
+  fillFilters(); updBadges();
+  renderHome(); renderC1dash(); renderC2dash(); renderC3dash();
+  renderPrio(); renderCamb(); renderProc();
+  const d=new Date();
+  document.getElementById('tb-meta').textContent=`Atualizado em ${d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'})}`;
+}
+
+function updBadges(){
+  document.getElementById('bdg-prio').textContent=DB.p.length;
+  document.getElementById('bdg-cambios').textContent=DB.c.length;
+  document.getElementById('bdg-proc').textContent=DB.pr.length;
+}
+
+/* ════ HOME ════ */
+function renderHome(){
+  const tot=DB.p.length,fin=DB.p.filter(r=>stClass(r.Status)==='finalizado').length,pct=tot?Math.round(fin/tot*100):0;
+  set('hs1-tot',tot);set('hs1-fin',fin);set('hs1-pct',pct+'%');
+  const tc=DB.c.length,camb=DB.c.filter(r=>!(r.Origen||'').toLowerCase().includes('portfolio')).length,port=tc-camb;
+  set('hs2-tot',tc);set('hs2-camb',camb);set('hs2-port',port);
+  const tp=DB.pr.length,vig=DB.pr.filter(r=>stClass(r['STATUS WI'])==='vigente').length,pend=tp-vig;
+  set('hs3-tot',tp);set('hs3-vig',vig);set('hs3-pend',pend);
+  set('sv-prio',tot);set('sv-fin',fin);set('sv-camb',tc);set('sv-wi',vig);
+}
+
+/* ════ C1 DASH ════ */
+function renderC1dash(d){
+  if(!d)d=DB.p;
+  const tot=d.length;
+  const fin=d.filter(r=>stClass(r.Status)==='finalizado').length;
+  const ong=d.filter(r=>stClass(r.Status)==='ongoing').length;
+  const can=d.filter(r=>stClass(r.Status)==='cancelado').length;
+  const prg=d.filter(r=>stClass(r.Status)==='programado').length;
+  const pct=tot?Math.round(fin/tot*100):0;
+  set('c1-tot',tot);set('c1-fin',fin);set('c1-fin-sub',pct+'% completados');
+  document.getElementById('c1-fin-bar').style.width=pct+'%';
+  set('c1-ong',ong);set('c1-can',can);set('c1-prg',prg);
+
+  const qs={};d.forEach(r=>{const q=r['Périodo de Priorización']||'N/A';qs[q]=(qs[q]||0)+1;});
+  const mx=Math.max(...Object.values(qs),1);
+  document.getElementById('c1-qb').innerHTML=Object.entries(qs).sort((a,b)=>a[0].localeCompare(b[0]))
+    .map(([q,c])=>`<div class="qb-row"><span class="qb-lbl">${q}</span><div class="qb-bg"><div class="qb-fill" style="width:${Math.round(c/mx*100)}%"></div></div><span class="qb-cnt">${c}</span></div>`).join('');
+
+  const tc={};d.forEach(r=>{const t=r['Master Tribu']||'—';tc[t]=(tc[t]||0)+1;});
+  const tColors={'FM&LM':'#FFE600','Linehaul':'#3B82F6','Ecosystem':'#00E5A0'};
+  document.getElementById('c1-tribu').innerHTML=Object.entries(tc).sort((a,b)=>b[1]-a[1])
+    .map(([t,c])=>{const col=Object.entries(tColors).find(([k])=>t.toLowerCase().includes(k.toLowerCase()));const color=col?col[1]:'#888';
+      return`<span class="tag" style="background:rgba(${h2r(color)},.15);color:${color};border:1px solid rgba(${h2r(color)},.25)">${t} · ${c}</span>`;}).join('');
+}
+
+/* ════ C2 DASH ════ */
+function renderC2dash(){
+  const d=DB.c,tot=d.length;
+  const camb=d.filter(r=>!(r.Origen||'').toLowerCase().includes('portfolio')).length,port=tot-camb;
+  const cp=tot?Math.round(camb/tot*100):0,pp=tot?Math.round(port/tot*100):0;
+  set('c2-tot',tot);set('c2-camb',camb);set('c2-camb-sub',cp+'% do total');
+  document.getElementById('c2-camb-bar').style.width=cp+'%';
+  set('c2-port',port);set('c2-port-sub',pp+'% do total');
+  document.getElementById('c2-port-bar').style.width=pp+'%';
+
+  const tri={};d.forEach(r=>{const t=r['Master Tribu']||'—';tri[t]=(tri[t]||0)+1;});
+  const mx=Math.max(...Object.values(tri),1);
+  document.getElementById('c2-tribu-top').innerHTML=Object.entries(tri).sort((a,b)=>b[1]-a[1]).slice(0,4)
+    .map(([t,c])=>`<div class="sbar-row"><span class="sbar-lbl">${t}</span><div class="sbar-bg"><div class="sbar-fill" style="width:${Math.round(c/mx*100)}%;background:var(--green)"></div></div><span class="sbar-cnt">${c}</span></div>`).join('');
+
+  const alc={};d.forEach(r=>{(r.Alcance||'').split(/[\s,]+/).forEach(a=>{if(a.startsWith('ML')||a==='Latam'||a==='Brasil')alc[a]=(alc[a]||0)+1;});});
+  document.getElementById('c2-alc').innerHTML=Object.entries(alc).sort((a,b)=>b[1]-a[1]).slice(0,6)
+    .map(([a,c])=>`<span class="tag" style="background:var(--dark3);border:1px solid var(--border);color:var(--text)">${a} <strong style="color:var(--green)">${c}</strong></span>`).join('');
+
+  const ow={};d.forEach(r=>{const o=r.Owner||'—';ow[o]=(ow[o]||0)+1;});
+  document.getElementById('c2-ow').innerHTML=Object.entries(ow).sort((a,b)=>b[1]-a[1]).slice(0,6)
+    .map(([o,c])=>`<span class="tag" style="background:var(--dark3);border:1px solid var(--border);color:var(--muted)">${o} <strong style="color:var(--blue);font-family:'Inter',sans-serif">${c}</strong></span>`).join('');
+
+  const sol={};d.forEach(r=>{const s=r.Solicitante||'—';sol[s]=(sol[s]||0)+1;});
+  document.getElementById('c2-sol').innerHTML=Object.entries(sol).sort((a,b)=>b[1]-a[1]).slice(0,8)
+    .map(([s,c])=>`<span class="tag" style="background:var(--dark3);border:1px solid var(--border);color:var(--muted)">${s} <strong style="color:var(--amber);font-family:'Inter',sans-serif">${c}</strong></span>`).join('');
+}
+
+/* ════ C3 DASH ════ */
+function renderC3dash(d){
+  if(!d)d=DB.pr;
+  const tot=d.length;
+  const vig=d.filter(r=>stClass(r['STATUS WI'])==='vigente').length,pend=tot-vig;
+  const pct=tot?Math.round(vig/tot*100):0;
+  set('c3-tot',tot);set('c3-vig',vig);set('c3-vig-sub',pct+'% documentados');
+  document.getElementById('c3-vig-bar').style.width=pct+'%';
+  set('c3-pend',pend);
+
+  const mil={'FIRST MILE':0,'LAST MILE':0,'LINEHAUL':0};
+  d.forEach(r=>{const m=(r.MILLA||'').toUpperCase();if(m.includes('FIRST'))mil['FIRST MILE']++;else if(m.includes('LAST'))mil['LAST MILE']++;else if(m.includes('LINE')||m.includes('LINEHAUL'))mil['LINEHAUL']++;});
+  const milC={'FIRST MILE':'#FFE600','LAST MILE':'#00E5A0','LINEHAUL':'#3B82F6'};
+  const mx=Math.max(...Object.values(mil),1);
+  document.getElementById('c3-milla').innerHTML=Object.entries(mil).filter(([,c])=>c>0)
+    .map(([m,c])=>`<div class="sbar-row"><span class="sbar-lbl" style="font-size:10px;color:${milC[m]}">${m}</span><div class="sbar-bg"><div class="sbar-fill" style="width:${Math.round(c/mx*100)}%;background:${milC[m]}"></div></div><span class="sbar-cnt">${c}</span></div>`).join('');
+
+  const tribes=[
+    {name:'FM + LM',color:'#FFE600',fn:r=>(r['MASTER TRIBU']||'').includes('FM')},
+    {name:'Linehaul',color:'#3B82F6',fn:r=>(r['MASTER TRIBU']||'').toLowerCase().includes('linehaul')||(r.MILLA||'').toUpperCase().includes('LINEHAUL')},
+    {name:'Ecosystem',color:'#00E5A0',fn:r=>(r['MASTER TRIBU']||'').toLowerCase().includes('ecosystem')},
+    {name:'Crowd',color:'#F59E0B',fn:r=>(r['MASTER TRIBU']||'').toLowerCase().includes('crowd')||(r['SUB TRIBU']||'').toLowerCase().includes('crowd')},
+  ];
+  document.getElementById('c3-tribu-cards').innerHTML=tribes.map(t=>{
+    const td=d.filter(t.fn),to=td.length||1,vg=td.filter(r=>stClass(r['STATUS WI'])==='vigente').length,p=Math.round(vg/to*100);
+    return`<div class="tcard"><div class="tc-name" style="color:${t.color}">${t.name}</div>
+      <div class="tc-nums">
+        <div><div class="tc-num-val">${to}</div><div class="tc-num-lbl">Total</div></div>
+        <div><div class="tc-num-val" style="color:${t.color}">${vg}</div><div class="tc-num-lbl">Vigentes</div></div>
+        <div><div class="tc-num-val" style="color:${t.color}">${p}%</div><div class="tc-num-lbl">Doc.</div></div>
+      </div>
+      <div class="tc-bar"><div class="tc-fill" style="width:${p}%;background:${t.color}"></div></div></div>`;
+  }).join('');
+}
+
+/* ════ FILL FILTERS ════ */
+function fillFilters(){
+  const ps=document.getElementById('f-prio-q');
+  [...new Set(DB.p.map(r=>r['Périodo de Priorización']).filter(Boolean))].sort().forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;ps.appendChild(o);});
+  const pt=document.getElementById('f-prio-tri');
+  [...new Set(DB.p.map(r=>r['Master Tribu']).filter(Boolean))].sort().forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;pt.appendChild(o);});
+  const ct=document.getElementById('f-camb-tri');
+  [...new Set(DB.c.map(r=>r['Master Tribu']).filter(Boolean))].sort().forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;ct.appendChild(o);});
+  const pm=document.getElementById('f-proc-mas');
+  [...new Set(DB.pr.map(r=>r['MASTER TRIBU']).filter(Boolean))].sort().forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;pm.appendChild(o);});
+  const ptri=document.getElementById('f-proc-tri');
+  [...new Set(DB.pr.map(r=>r['SUB TRIBU']||r.TRIBU).filter(Boolean))].sort().forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;ptri.appendChild(o);});
+}
+
+/* ════ PRIO ════ */
+function qOrder(q){const m=(q||'').match(/Q(\d)\/(\d{2})/i);return m?parseInt(m[2])*10+parseInt(m[1]):0;}
+function fPrio(){
+  const q=document.getElementById('f-prio-q').value,tri=document.getElementById('f-prio-tri').value,st=document.getElementById('f-prio-st').value,s=srch.toLowerCase();
+  return DB.p.filter(r=>{
+    if(q&&r['Périodo de Priorización']!==q)return false;
+    if(tri&&r['Master Tribu']!==tri)return false;
+    if(st&&!(r.Status||'').toLowerCase().includes(st.toLowerCase()))return false;
+    if(s&&![r.Tema,r.Owner,r['Focal Referente'],r['Sub Tribu'],r['Master Tribu']].join(' ').toLowerCase().includes(s))return false;
+    return true;
+  }).sort((a,b)=>qOrder(b['Périodo de Priorización'])-qOrder(a['Périodo de Priorización']));
+}
+function renderPrio(){pp=1;renderPrioPage();}
+function renderPrioPage(){
+  const data=fPrio(),start=(pp-1)*PG,pg=data.slice(start,start+PG);
+  renderC1dash(data);
+  document.getElementById('cnt-prio').textContent=data.length+' temas';
+  const tb=document.getElementById('tb-prio');
+  if(!data.length){tb.innerHTML=`<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--muted)">Sin resultados</td></tr>`;document.getElementById('pag-prio').innerHTML='';return;}
+  tb.innerHTML=pg.map(r=>`<tr>
+    <td><span class="ptag">${r['Périodo de Priorización']||'—'}</span></td>
+    <td style="font-weight:500;max-width:160px;font-size:12.5px">${r.Tema||'—'}</td>
+    <td><div style="font-size:12.5px">${r['Sub Tribu']||r['Master Tribu']||'—'}</div><div style="font-size:10.5px;color:var(--muted)">${r['Master Tribu']||''}</div></td>
+    <td><div style="font-size:12.5px">${r.Owner||'—'}</div><div style="font-size:10.5px;color:var(--muted)">${r['Focal Referente']||''}</div></td>
+    <td>${badge(r.Status)}</td>
+    <td style="min-width:100px">${prog(r['% Progreso'])}</td>
+    <td style="font-size:12px;color:var(--muted)">${r['Etapa Actual']||'—'}</td>
+    <td style="font-size:12px;color:var(--muted);line-height:1.55;min-width:260px;white-space:pre-wrap;word-break:break-word">${r['Próximo Paso / Comentario']||'—'}</td>
+  </tr>`).join('');
+  renderPag('pag-prio',data.length,pp,p=>{pp=p;renderPrioPage();});
+}
+
+/* ════ CAMBIOS ════ */
+function setCambFilter(v,el){cFilt=v;document.querySelectorAll('#scene-cambios .fc').forEach(c=>c.classList.remove('active'));el.classList.add('active');cp=1;renderCambPage();}
+function fCamb(){
+  const tri=document.getElementById('f-camb-tri').value,alc=document.getElementById('f-camb-alc').value,s=srch.toLowerCase();
+  return DB.c.filter(r=>{
+    if(cFilt&&r.Origen!==cFilt)return false;
+    if(tri&&r['Master Tribu']!==tri)return false;
+    if(alc&&!(r.Alcance||'').includes(alc))return false;
+    if(s&&![r.Solicitud,r.Owner,r.Solicitante,r['Sub Tribu'],r['Master Tribu']].join(' ').toLowerCase().includes(s))return false;
+    return true;
+  });
+}
+function renderCamb(){cp=1;renderCambPage();}
+function renderCambPage(){
+  const data=fCamb(),start=(cp-1)*PG,pg=data.slice(start,start+PG);
+  document.getElementById('cnt-camb').textContent=data.length+' registros';
+  const tb=document.getElementById('tb-camb');
+  if(!data.length){tb.innerHTML=`<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--muted)">Sin resultados</td></tr>`;document.getElementById('pag-camb').innerHTML='';return;}
+  tb.innerHTML=pg.map(r=>{const isP=(r.Origen||'').toLowerCase().includes('portfolio');return`<tr>
+    <td><span class="bge ${isP?'portfolio':'cambio'}">${isP?'📦 Portfolio':'🔄 Cambio'}</span></td>
+    <td style="font-weight:500;max-width:200px;font-size:12.5px">${r.Solicitud||'—'}</td>
+    <td style="font-size:12px">${r['Sub Tribu']||'—'}</td>
+    <td style="font-size:12px;color:var(--muted)">${r['Master Tribu']||'—'}</td>
+    <td style="font-size:12px">${r.Alcance||'—'}</td>
+    <td style="font-size:12.5px">${r.Owner||'—'}</td>
+    <td style="font-size:12px;color:var(--muted)">${r.Solicitante||'—'}</td>
+    <td>${badge(r.Status||'Comunicado/Publicado')}</td>
+  </tr>`;}).join('');
+  renderPag('pag-camb',data.length,cp,p=>{cp=p;renderCambPage();});
+}
+
+/* ════ PROCESOS ════ */
+function fProc(){
+  const tri=document.getElementById('f-proc-tri').value,mas=document.getElementById('f-proc-mas').value,st=document.getElementById('f-proc-st').value,s=srch.toLowerCase();
+  return DB.pr.filter(r=>{
+    const _tri=r['SUB TRIBU']||r.TRIBU||'';
+    if(tri&&_tri!==tri)return false;
+    if(mas&&r['MASTER TRIBU']!==mas)return false;
+    if(st&&!(r['STATUS WI']||'').toLowerCase().includes(st.toLowerCase()))return false;
+    if(s&&![r.TEMA,_tri,r.MILLA,r['MASTER TRIBU']].join(' ').toLowerCase().includes(s))return false;
+    return true;
+  });
+}
+function renderProc(){prp=1;renderProcPage();}
+function renderProcPage(){
+  const data=fProc(),start=(prp-1)*PG,pg=data.slice(start,start+PG);
+  renderC3dash(data);
+  document.getElementById('cnt-proc').textContent=data.length+' procesos';
+  const tb=document.getElementById('tb-proc');
+  const mastC={'FM&LM':'#FFE600','Linehaul':'#3B82F6','Ecosystem':'#00E5A0','Crowd':'#F59E0B'};
+  if(!data.length){tb.innerHTML=`<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--muted)">Sin resultados</td></tr>`;document.getElementById('pag-proc').innerHTML='';return;}
+  tb.innerHTML=pg.map(r=>{const mas=r['MASTER TRIBU']||'';const mastKey=Object.keys(mastC).find(k=>mas.toLowerCase().includes(k.toLowerCase()));const mc=mastKey?mastC[mastKey]:'#888';const lk=r.Link||'';
+    return`<tr>
+      <td><span style="color:${mc};font-size:11px;font-weight:700">${mas||'—'}</span></td>
+      <td style="font-size:11.5px;color:var(--muted)">${r.MILLA||'—'}</td>
+      <td style="font-size:11.5px;color:var(--muted)">${r['SUB TRIBU']||r.TRIBU||'—'}</td>
+      <td style="font-weight:500;font-size:12.5px;max-width:165px">${r.TEMA||'—'}</td>
+      <td>${badge(r['STATUS WI'])}</td>
+      <td style="font-size:12px">${r['ABRANGÊNCIA']||'—'}</td>
+      <td style="text-align:center;font-family:'Inter',sans-serif;font-weight:700;font-size:12px">${r['VERSION WI']||'0'}</td>
+      <td style="font-size:11px;color:var(--muted);white-space:nowrap">${r['ULTIMA ATUALIZACIÓN WI']||'—'}</td>
+      <td>${lk?`<a class="wil" href="${lk}" target="_blank" rel="noopener">↗ Abrir WI</a>`:'<span style="font-size:11px;color:var(--muted)">–</span>'}</td>
+    </tr>`;}).join('');
+  renderPag('pag-proc',data.length,prp,p=>{prp=p;renderProcPage();});
+}
+
+/* ════ PAGINATION ════ */
+function renderPag(id,total,cur,cb){
+  const pages=Math.ceil(total/PG);
+  if(pages<=1){document.getElementById(id).innerHTML='';return;}
+  let h=`<button class="pgbtn" onclick="(${cb.toString()})(${cur-1})" ${cur===1?'disabled':''}>‹</button>`;
+  for(let i=1;i<=pages;i++){
+    if(i===1||i===pages||Math.abs(i-cur)<=1)h+=`<button class="pgbtn ${i===cur?'on':''}" onclick="(${cb.toString()})(${i})">${i}</button>`;
+    else if(Math.abs(i-cur)===2)h+=`<span style="color:var(--muted);padding:0 3px">…</span>`;
+  }
+  h+=`<button class="pgbtn" onclick="(${cb.toString()})(${cur+1})" ${cur===pages?'disabled':''}>›</button>`;
+  document.getElementById(id).innerHTML=h;
+}
+
+/* ════ NAV ════ */
+const TITLES={home:'Menú Inicial',prio:'Escenario 1 · Priorizacion Via Workshop',cambios:'Escenario 2 · Cambios & Portfolio',proc:'Matriz de Procesos OTR · Mapeo de Temas PD Estándar'};
+function go(s){
+  document.querySelectorAll('.scene').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+  document.getElementById('scene-'+s).classList.add('active');
+  document.getElementById('nav-'+s).classList.add('active');
+  document.getElementById('tb-title').textContent=TITLES[s]||s;
+  document.getElementById('gSearch').value='';srch='';
+  window.scrollTo(0,0);
+}
+
+/* ════ SEARCH ════ */
+function doSearch(){srch=document.getElementById('gSearch').value;pp=1;cp=1;prp=1;renderPrioPage();renderCambPage();renderProcPage();}
+
+/* ════ CSV UPLOAD ════ */
+function uploadCSV(e){
+  Array.from(e.target.files).forEach(f=>{
+    const r=new FileReader();
+    r.onload=ev=>{
+      const t=ev.target.result,n=f.name.toLowerCase();
+      if(n.includes('priorizac')||t.includes('Sub Tribu')){
+        const ls=t.split('\n'),i=ls.findIndex(l=>l.includes('Tipo,'));DB.p=pcsv(i>=0?ls.slice(i).join('\n'):t);
+      }else if(n.includes('cambio')||n.includes('portifolio')||t.includes('PRIORIZACION POR CAMBIOS')){
+        const ls=t.split('\n'),i=ls.findIndex(l=>l.trim().startsWith('Origen,'));DB.c=pcsv(i>=0?ls.slice(i).join('\n'):t);
+      }else if(n.includes('diagnostico')||n.includes('matriz')||t.includes('MILLA')){
+        const ls=t.split('\n'),i=ls.findIndex(l=>l.trim().startsWith('MILLA'));DB.pr=pcsv(i>=0?ls.slice(i).join('\n'):t);
+      }
+      fillFilters();updBadges();renderHome();renderC1dash();renderC2dash();renderC3dash();renderPrioPage();renderCambPage();renderProcPage();
+      toast('✅ ¡Datos actualizados correctamente!');
+    };
+    r.readAsText(f,'UTF-8');
+  });
+}
+
+function toast(msg){const el=document.getElementById('toast');document.getElementById('toast-msg').textContent=msg;el.classList.add('on');setTimeout(()=>el.classList.remove('on'),3500);}
+function set(id,v){const el=document.getElementById(id);if(el)el.textContent=v;}
+
+window.addEventListener('DOMContentLoaded',init);
+</script>
+</body>
+</html>
