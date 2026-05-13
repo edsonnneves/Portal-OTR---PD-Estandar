@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -730,7 +730,7 @@ function qOrder(q){const m=(q||'').match(/Q(\d)\/(\d{2})/i);return m?parseInt(m[
 function fPrio(){
   const q=document.getElementById('f-prio-q').value,tri=document.getElementById('f-prio-tri').value,st=document.getElementById('f-prio-st').value,s=srch.toLowerCase();
   return DB.p.filter(r=>{
-    if(q&&r['Périodo de Priorización']||r['Périodo de Priorização']!==q)return false;
+    const _per=r['Périodo de Priorización']||r['Périodo de Priorização']||'';if(q&&_per!==q)return false;
     if(tri&&r['Master Tribu']!==tri)return false;
     if(st&&!(r.Status||'').toLowerCase().includes(st.toLowerCase()))return false;
     if(s&&![r.Tema,r.Owner,r['Focal Referente'],r['Sub Tribu'],r['Master Tribu']].join(' ').toLowerCase().includes(s))return false;
